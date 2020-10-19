@@ -1,17 +1,19 @@
 import React from 'react'
 
-/**
- * This module must expose a single Object which has Components `Group`, `Item`, `Button`, and `Panel`.
- *
- * `Group` returns a `div` element without a role and has Accordion Context.
- * */
-
-/**
- * What we gonna do is to have 2 types of Accordion. The "single" and "multiselect".
- * */
+// TODO
+// - review and abstract some of the utils which we can use for MultiSelect.
+// - add keyboard binding.
+// - make the AccordionPanel accepts any html like div, section or etc.
 
 /**
  * WAI-ARIA Accordion specs - https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
+ * */
+
+/**
+ *
+ * The `AccordionPanel` returns an host elemnt without a `role` prop. The user will decide if he/she
+ * gonna add it or now. There is section on the WAI-ARIA Accordion specs which talks about the
+ * the "cons" of using a region role. - https://www.w3.org/TR/wai-aria-practices-1.2/#wai-aria-roles-states-and-properties
  * */
 
 // ---------------------------------------- //
@@ -109,9 +111,7 @@ function AccordionPanel(props: JSX.IntrinsicElements['div']) {
   const accordionItemCtx = useAccordionItemCtx()
   const [activeIdx] = useSingleAccordionCtx().activeIdx
 
-  return (
-    <div role="region" {...props} hidden={accordionItemCtx !== activeIdx} />
-  )
+  return <div {...props} hidden={accordionItemCtx !== activeIdx} />
 }
 
 function SingleAccordion({

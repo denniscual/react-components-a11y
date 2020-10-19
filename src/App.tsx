@@ -6,7 +6,7 @@ function App() {
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
-        <SingleAccordion activeIdx={0} type={SingleAccordionTypes.collapsible}>
+        <SingleAccordion activeIdx={0}>
           <SingleAccordion.Item idx={0}>
             <h3>
               <SingleAccordion.Button
@@ -19,7 +19,9 @@ function App() {
             <SingleAccordion.Panel
               id="accordion-panel-zion"
               aria-labelledby="accordion-button-zion"
+              role="region"
             >
+              <h4>My biography</h4>
               <p>Zion is the son of the great Irish and Dennis</p>
             </SingleAccordion.Panel>
           </SingleAccordion.Item>
@@ -35,7 +37,9 @@ function App() {
             <SingleAccordion.Panel
               id="accordion-panel-irish"
               aria-labelledby="accordion-button-irish"
+              role="region"
             >
+              <h4>My biography</h4>
               <p>Irish is the son of the great Berto and Chengly</p>
             </SingleAccordion.Panel>
           </SingleAccordion.Item>
