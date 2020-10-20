@@ -1,9 +1,10 @@
 import React from 'react'
 
 // TODO
-// - review and abstract some of the utils which we can use for MultiSelect.
 // - add keyboard binding.
+// - review and abstract some of the utils which we can use for MultiSelect.
 // - make the AccordionPanel accepts any html like div, section or etc.
+// - handle the ref
 
 /**
  * WAI-ARIA Accordion specs - https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
@@ -35,6 +36,7 @@ const SingleAccordionContext = React.createContext<
   | {
       activeIdx: [number, React.Dispatch<React.SetStateAction<number>>]
       type: SingleAccordionTypes
+      id: string
     }
   | undefined
 >(undefined)
@@ -71,24 +73,48 @@ function AccordionItem({ idx, children }: AccordionItemProps) {
   )
 }
 
+function createSemanticId(parentId: string, order: number, type: string) {
+  return `${parentId}-${order}-${type}`
+}
+
 function AccordionButton(
   props: Omit<JSX.IntrinsicElements['button'], 'onClick'>
 ) {
   const accordionItemCtx = useAccordionItemCtx()
-  const { activeIdx: activeIdxState, type } = useSingleAccordionCtx()
+  const {
+    activeIdx: activeIdxState,
+    type,
+    id: singleAccordionId,
+  } = useSingleAccordionCtx()
   const [activeIdx, setActiveIdx] = activeIdxState
 
   const isActive = accordionItemCtx === activeIdx
 
   // The aria props are different based on the type. If the type is `collapsible`,
   // we will not add `aria-disabled` to the button.
+
+  const buttonId = createSemanticId(
+    singleAccordionId,
+    accordionItemCtx,
+    'button'
+  )
+
+  const defaultAriaProps = {
+    'aria-expanded': isActive,
+    'aria-controls': createSemanticId(
+      singleAccordionId,
+      accordionItemCtx,
+      'panel'
+    ),
+  }
+
   const ariaProps =
     type === SingleAccordionTypes.tabbed
       ? {
-          'aria-expanded': isActive,
+          ...defaultAriaProps,
           'aria-disabled': isActive,
         }
-      : { 'aria-expanded': isActive }
+      : { ...defaultAriaProps }
 
   function handleClick() {
     if (type === SingleAccordionTypes.tabbed) {
@@ -104,32 +130,55 @@ function AccordionButton(
     }
   }
 
-  return <button {...props} onClick={handleClick} {...ariaProps} />
+  return (
+    <button id={buttonId} {...ariaProps} {...props} onClick={handleClick} />
+  )
 }
 
 function AccordionPanel(props: JSX.IntrinsicElements['div']) {
   const accordionItemCtx = useAccordionItemCtx()
-  const [activeIdx] = useSingleAccordionCtx().activeIdx
+  const {
+    activeIdx: activeIdxState,
+    id: singleAccordionId,
+  } = useSingleAccordionCtx()
+  const [activeIdx] = activeIdxState
 
-  return <div {...props} hidden={accordionItemCtx !== activeIdx} />
+  return (
+    <div
+      aria-labelledby={createSemanticId(
+        singleAccordionId,
+        accordionItemCtx,
+        'button'
+      )}
+      id={createSemanticId(singleAccordionId, accordionItemCtx, 'panel')}
+      {...props}
+      hidden={accordionItemCtx !== activeIdx}
+    />
+  )
 }
 
 function SingleAccordion({
   activeIdx = 0,
   type = SingleAccordionTypes.tabbed,
   children,
+  id,
   ...otherProps
 }: {
   activeIdx?: number
   type?: SingleAccordionTypes
+  // The unique id of the SingleAccordion. This is required for a lot of reasons
+  // like leveraging the support for navigation. Right now, we will just rely
+  // on an `id` beacuse I don't want to have a fancy solution for some keyboard problems.
+  id: string
 } & JSX.IntrinsicElements['div']) {
   const activeIdxState = React.useState(activeIdx)
   const value = React.useMemo(
     () => ({
       activeIdx: activeIdxState,
       type,
+      id,
     }),
-    [activeIdxState, type]
+    [activeIdxState, type, id]
   )
   return (
     <SingleAccordionContext.Provider value={value}>
