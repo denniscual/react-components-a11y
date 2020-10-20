@@ -1,10 +1,12 @@
 import React from 'react'
+import { useIsomorphicLayoutEffect } from '../utils'
 
 // TODO
-// - add keyboard binding.
+// - review our util
 // - review and abstract some of the utils which we can use for MultiSelect.
 // - make the AccordionPanel accepts any html like div, section or etc.
 // - handle the ref
+// - make some Components polymorphic in terms of their rendered root elements.
 
 /**
  * WAI-ARIA Accordion specs - https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
@@ -27,39 +29,121 @@ import React from 'react'
 // -----------------------------------------//
 // -----------------------------------------//
 
-const KEYBOARD_KEYS = {
-  ARROW_DOWN: 'ArrowDown',
-  ARROW_UP: 'ArrowUp',
+enum SingleAccordionTypes {
+  tabbed = 'tabbed',
+  collapsible = 'collapsible',
 }
 
-function useLazyRef<T>(cb: () => T) {
-  const lazyRef = React.useRef<T | null>(null)
-  if (!lazyRef.current) {
-    lazyRef.current = cb()
+function SingleAccordion({
+  activeIdx = 0,
+  type = SingleAccordionTypes.tabbed,
+  children,
+  /**
+   * The prop is not required but it is recommended to pass an `id` if
+   * the page has multiple instance of `SingleAccordion`.
+   * */
+  id = 'single-accordion',
+  ...otherProps
+}: {
+  activeIdx?: number
+  type?: SingleAccordionTypes
+  // The unique id of the SingleAccordion. This is required for a lot of reasons
+  // like leveraging the support for navigation. Right now, we will just rely
+  // on an `id` beacuse I don't want to have a fancy solution for some keyboard problems.
+  id?: string
+} & JSX.IntrinsicElements['div']) {
+  const activeIdxState = React.useState(activeIdx)
+  const value = React.useMemo(
+    () => ({
+      activeIdx: activeIdxState,
+      type,
+      id,
+    }),
+    [activeIdxState, type, id]
+  )
+  return (
+    <DescendantsProvider>
+      <SingleAccordionContext.Provider value={value}>
+        <div {...otherProps}>{children}</div>
+      </SingleAccordionContext.Provider>
+    </DescendantsProvider>
+  )
+}
+
+SingleAccordion.Item = AccordionItem
+SingleAccordion.Button = AccordionButton
+SingleAccordion.Panel = AccordionPanel
+
+function useSingleAccordionCtx() {
+  const ctx = React.useContext(SingleAccordionContext)
+  if (typeof ctx === 'undefined') {
+    throw new Error(
+      `Consuming "SingleAccordionContext" outside its "Provider" can lead to error.`
+    )
   }
-  return lazyRef.current
+  return ctx
 }
 
-function classNames(...classNames: string[]) {
-  return classNames
-    .filter(Boolean)
-    .reduce((acc, value) => acc.concat(` ${value}`), '')
-    .trim()
+const SingleAccordionContext = React.createContext<
+  | {
+      activeIdx: [number, React.Dispatch<React.SetStateAction<number>>]
+      type: SingleAccordionTypes
+      id: string
+    }
+  | undefined
+>(undefined)
+
+function useDescendantIdx({ element }: { element: HTMLElement | null }) {
+  const { registerElement, findElementIdx } = React.useContext(
+    DescendantsContext
+  )
+  const [, forceUpdate] = React.useState(() => ({}))
+  // in initial render, this will return -1 because the element is null.
+  const descendantIndex = findElementIdx(element)
+
+  // Use layout effect to prevent flashing.
+  useIsomorphicLayoutEffect(() => {
+    if (!element) {
+      // Basically if you're accessing an element from a `ref` then you access the element
+      // outside its Parent Component, the `element` will always be `null` unless the Component gets re-render. So force update in here is
+      // a must to returned the element. But if you access the element inside its Parent Component or the
+      // Component who use the `ref` on its element, then no need to force update because Component can access the element inside the
+      // effect.
+      forceUpdate({})
+      return
+    }
+    registerElement(element)
+  }, [registerElement, element])
+
+  return descendantIndex
 }
 
-type DOMTreeRegistrar = {
-  registerElement(element: HTMLElement): void
-  unRegisterElement(element: HTMLElement): void
-  findElementIdx(element: HTMLElement): number
-  getPrevElement(element: HTMLElement): HTMLElement | null
-  getNextElement(element: HTMLElement): HTMLElement | null
+function useDescendantKeydown<T extends HTMLElement>({
+  element,
+}: {
+  element: T | null
+}): React.KeyboardEventHandler<T> {
+  const { getPrevElement, getNextElement } = React.useContext(
+    DescendantsContext
+  )
+  return React.useCallback(
+    (event: React.KeyboardEvent<T>) => {
+      if (element) {
+        if (event.key === KEYBOARD_KEYS.ARROW_DOWN) {
+          const nextElement = getNextElement(element)
+          nextElement?.focus()
+        }
+        if (event.key === KEYBOARD_KEYS.ARROW_UP) {
+          const prevElement = getPrevElement(element)
+          prevElement?.focus()
+        }
+      }
+    },
+    [getNextElement, getPrevElement, element]
+  )
 }
 
-const DOMTreeContext = React.createContext<DOMTreeRegistrar>(
-  {} as DOMTreeRegistrar
-)
-
-function DOMTreeProvider({ children }: React.PropsWithChildren<{}>) {
+function DescendantsProvider({ children }: React.PropsWithChildren<{}>) {
   const [registeredElements, setRegisteredElements] = React.useState<
     HTMLElement[]
   >([])
@@ -93,7 +177,11 @@ function DOMTreeProvider({ children }: React.PropsWithChildren<{}>) {
           // element we are adding appears earlier than an existing element's
           // DOM node via `node.compareDocumentPosition`. If it does, we insert
           // the new element at this index.
-
+          //
+          // Because `registerDescendant` will be
+          // called in an effect every time the Parent component gets render,
+          // we should be sure that this index is accurate when descendent
+          // elements come or go from our component.
           const index = prevRegisteredElements.findIndex((prevElement) => {
             // Does this element's DOM node appear before another item in the
             // array in our DOM tree? If so, return true to grab the index at
@@ -121,45 +209,35 @@ function DOMTreeProvider({ children }: React.PropsWithChildren<{}>) {
           return newElements
         })
       },
-      unRegisterElement(element: HTMLElement) {
-        // Here if un-register, we need to update the tree
-        // via removing the element on the array and call setState.
-        const index = registeredElements.findIndex(
-          (prevElement) => prevElement === element
-        )
-        if (index === -1) {
-          return
+      findElementIdx(element: HTMLElement | null) {
+        if (!element) {
+          return -1
         }
-        return registeredElements.slice().splice(index, 1)
-      },
-      findElementIdx(element: HTMLElement) {
         return registeredElements.findIndex(
           (prevElement) => prevElement === element
         )
       },
       getPrevElement(element: HTMLElement) {
-        const index = registeredElements.findIndex(
+        const idx = registeredElements.findIndex(
           (prevElement) => prevElement === element
         )
-
-        if (index === -1) {
+        if (idx === -1) {
           return null
         }
-
         const prevIdx =
-          (index + registeredElements.length - 1) % registeredElements.length
+          (idx + registeredElements.length - 1) % registeredElements.length
 
         return registeredElements[prevIdx]
       },
       getNextElement(element: HTMLElement) {
-        const index = registeredElements.findIndex(
+        const idx = registeredElements.findIndex(
           (prevElement) => prevElement === element
         )
-        if (index === -1) {
+        if (idx === -1) {
           return null
         }
         const nextIdx =
-          (index + registeredElements.length + 1) % registeredElements.length
+          (idx + registeredElements.length + 1) % registeredElements.length
 
         return registeredElements[nextIdx]
       },
@@ -168,37 +246,50 @@ function DOMTreeProvider({ children }: React.PropsWithChildren<{}>) {
   )
 
   return (
-    <DOMTreeContext.Provider value={registrar}>
+    <DescendantsContext.Provider value={registrar}>
       {children}
-    </DOMTreeContext.Provider>
+    </DescendantsContext.Provider>
   )
 }
 
-enum SingleAccordionTypes {
-  tabbed = 'tabbed',
-  collapsible = 'collapsible',
+const DescendantsContext = React.createContext<DescendantsProps>(
+  {} as DescendantsProps
+)
+
+type DescendantsProps = {
+  registerElement(element: HTMLElement): void
+  findElementIdx(element: HTMLElement | null): number
+  getPrevElement(element: HTMLElement): HTMLElement | null
+  getNextElement(element: HTMLElement): HTMLElement | null
 }
 
-const SingleAccordionContext = React.createContext<
-  | {
-      activeIdx: [number, React.Dispatch<React.SetStateAction<number>>]
-      type: SingleAccordionTypes
-      id: string
-    }
-  | undefined
->(undefined)
+function AccordionItem({ children }: AccordionItemProps) {
+  const { id: singleAccordionId } = useSingleAccordionCtx()
+  const buttonEl = React.useRef<HTMLButtonElement | null>(null)
 
-function useSingleAccordionCtx() {
-  const ctx = React.useContext(SingleAccordionContext)
-  if (typeof ctx === 'undefined') {
-    throw new Error(
-      `Consuming "SingleAccordionContext" outside its "Provider" can lead to error.`
-    )
+  const index = useDescendantIdx({ element: buttonEl.current })
+  const itemId = makeId(`${singleAccordionId}-item`, index)
+  const buttonId = makeId(itemId, 'button')
+  const panelId = makeId(itemId, 'panel')
+
+  const ctxValue = {
+    idx: index,
+    buttonId,
+    panelId,
+    buttonRef: buttonEl,
   }
-  return ctx
+
+  return (
+    <AccordionItemContext.Provider value={ctxValue}>
+      <div id={itemId}>{children}</div>
+    </AccordionItemContext.Provider>
+  )
 }
 
-const AccordionItemContext = React.createContext<number | undefined>(undefined)
+// TODO: Remove the id prop? Make the app generate its own id???
+type AccordionItemProps = React.PropsWithChildren<
+  {} & JSX.IntrinsicElements['div']
+>
 
 function useAccordionItemCtx() {
   const ctx = React.useContext(AccordionItemContext)
@@ -210,42 +301,35 @@ function useAccordionItemCtx() {
   return ctx
 }
 
-type AccordionItemProps = React.PropsWithChildren<{ idx: number }>
+const AccordionItemContext = React.createContext<
+  | {
+      idx: number
+      buttonId: string
+      panelId: string
+      buttonRef: React.MutableRefObject<HTMLButtonElement | null>
+    }
+  | undefined
+>(undefined)
 
-function AccordionItem({ idx, children }: AccordionItemProps) {
-  return (
-    <AccordionItemContext.Provider value={idx}>
-      {children}
-    </AccordionItemContext.Provider>
-  )
-}
-
-function createSemanticId(parentId: string, order: number, type: string) {
-  return `${parentId}-${order}-${type}`
+const KEYBOARD_KEYS = {
+  ARROW_DOWN: 'ArrowDown',
+  ARROW_UP: 'ArrowUp',
 }
 
 function AccordionButton(
   props: Omit<JSX.IntrinsicElements['button'], 'onClick'>
 ) {
-  const accordionItemCtx = useAccordionItemCtx()
-  const {
-    activeIdx: activeIdxState,
-    type,
-    id: singleAccordionId,
-  } = useSingleAccordionCtx()
+  const { idx, buttonRef, buttonId, panelId } = useAccordionItemCtx()
+  const { activeIdx: activeIdxState, type } = useSingleAccordionCtx()
   const [activeIdx, setActiveIdx] = activeIdxState
-  const isActive = accordionItemCtx === activeIdx
+  const isActive = idx === activeIdx
 
   // The aria props are different based on the type. If the type is `collapsible`,
   // we will not add `aria-disabled` to the button.
 
   const defaultAriaProps = {
     'aria-expanded': isActive,
-    'aria-controls': createSemanticId(
-      singleAccordionId,
-      accordionItemCtx,
-      'panel'
-    ),
+    'aria-controls': panelId,
   }
 
   const ariaProps =
@@ -256,61 +340,28 @@ function AccordionButton(
         }
       : { ...defaultAriaProps }
 
-  const buttonId = createSemanticId(
-    singleAccordionId,
-    accordionItemCtx,
-    'button'
-  )
-
   function handleClick() {
     if (type === SingleAccordionTypes.tabbed) {
-      setActiveIdx(accordionItemCtx)
+      setActiveIdx(idx)
     } else {
       if (isActive) {
         setActiveIdx(-1)
       } else {
-        setActiveIdx(accordionItemCtx)
+        setActiveIdx(idx)
       }
     }
   }
 
-  const domRegistrar = React.useContext(DOMTreeContext)
-  const buttonEl = React.useRef<HTMLButtonElement | null>(null)
-
-  React.useLayoutEffect(() => {
-    if (buttonEl.current) {
-      domRegistrar.registerElement(buttonEl.current)
-    }
-  }, [domRegistrar])
-
-  React.useEffect(() => {
-    if (buttonEl.current) {
-      const currentButtonEl = buttonEl.current
-      return () => domRegistrar.unRegisterElement(currentButtonEl)
-    }
-  }, [domRegistrar])
-
-  const handleKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (
-    event
-  ) => {
-    if (buttonEl.current) {
-      if (event.key === KEYBOARD_KEYS.ARROW_DOWN) {
-        const nextElement = domRegistrar.getNextElement(buttonEl.current)
-        nextElement?.focus()
-      }
-      if (event.key === KEYBOARD_KEYS.ARROW_UP) {
-        const prevElement = domRegistrar.getNextElement(buttonEl.current)
-        prevElement?.focus()
-      }
-    }
-  }
+  const handleKeyDown = useDescendantKeydown<HTMLButtonElement>({
+    element: buttonRef.current,
+  })
 
   return (
     <button
-      ref={buttonEl}
-      id={buttonId}
-      {...ariaProps}
+      ref={buttonRef}
       {...props}
+      {...ariaProps}
+      id={buttonId}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     />
@@ -318,61 +369,44 @@ function AccordionButton(
 }
 
 function AccordionPanel(props: JSX.IntrinsicElements['div']) {
-  const accordionItemCtx = useAccordionItemCtx()
-  const {
-    activeIdx: activeIdxState,
-    id: singleAccordionId,
-  } = useSingleAccordionCtx()
+  const { idx, panelId, buttonId } = useAccordionItemCtx()
+  const { activeIdx: activeIdxState } = useSingleAccordionCtx()
   const [activeIdx] = activeIdxState
 
   return (
     <div
-      aria-labelledby={createSemanticId(
-        singleAccordionId,
-        accordionItemCtx,
-        'button'
-      )}
-      id={createSemanticId(singleAccordionId, accordionItemCtx, 'panel')}
       {...props}
-      hidden={accordionItemCtx !== activeIdx}
+      /**
+       * Some screen readers when using "Up" and "Down" keys, it will not
+       * jump the focus on next accordion header, but will jump to the active panel.
+       * Because of this, we will make this "div" focusable.
+       * */
+      tabIndex={-1}
+      aria-labelledby={buttonId}
+      id={panelId}
+      hidden={idx !== activeIdx}
+      role="region"
     />
   )
 }
 
-function SingleAccordion({
-  activeIdx = 0,
-  type = SingleAccordionTypes.tabbed,
-  children,
-  id,
-  ...otherProps
-}: {
-  activeIdx?: number
-  type?: SingleAccordionTypes
-  // The unique id of the SingleAccordion. This is required for a lot of reasons
-  // like leveraging the support for navigation. Right now, we will just rely
-  // on an `id` beacuse I don't want to have a fancy solution for some keyboard problems.
-  id: string
-} & JSX.IntrinsicElements['div']) {
-  const activeIdxState = React.useState(activeIdx)
-  const value = React.useMemo(
-    () => ({
-      activeIdx: activeIdxState,
-      type,
-      id,
-    }),
-    [activeIdxState, type, id]
-  )
-  return (
-    <DOMTreeProvider>
-      <SingleAccordionContext.Provider value={value}>
-        <div {...otherProps}>{children}</div>
-      </SingleAccordionContext.Provider>
-    </DOMTreeProvider>
-  )
+function makeId(label: string, anotherLabel: number | string) {
+  return `${label}-${anotherLabel}`
 }
 
-SingleAccordion.Item = AccordionItem
-SingleAccordion.Button = AccordionButton
-SingleAccordion.Panel = AccordionPanel
+function useLazyRef<T>(cb: () => T) {
+  const lazyRef = React.useRef<T | null>(null)
+  if (!lazyRef.current) {
+    lazyRef.current = cb()
+  }
+  return lazyRef.current
+}
+
+function classNames(...classNames: string[]) {
+  return classNames
+    .filter(Boolean)
+    .reduce((acc, value) => acc.concat(` ${value}`), '')
+    .trim()
+}
 
 export { SingleAccordion, SingleAccordionTypes }
