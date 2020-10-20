@@ -131,6 +131,7 @@ function useDescendantKeydown<T extends HTMLElement>({
       if (element) {
         if (event.key === KEYBOARD_KEYS.ARROW_DOWN) {
           const nextElement = getNextElement(element)
+          // TODO: Warn the uesr if the nextElement is undefined.
           nextElement?.focus()
         }
         if (event.key === KEYBOARD_KEYS.ARROW_UP) {
