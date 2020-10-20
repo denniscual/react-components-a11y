@@ -27,6 +27,153 @@ import React from 'react'
 // -----------------------------------------//
 // -----------------------------------------//
 
+const KEYBOARD_KEYS = {
+  ARROW_DOWN: 'ArrowDown',
+  ARROW_UP: 'ArrowUp',
+}
+
+function useLazyRef<T>(cb: () => T) {
+  const lazyRef = React.useRef<T | null>(null)
+  if (!lazyRef.current) {
+    lazyRef.current = cb()
+  }
+  return lazyRef.current
+}
+
+function classNames(...classNames: string[]) {
+  return classNames
+    .filter(Boolean)
+    .reduce((acc, value) => acc.concat(` ${value}`), '')
+    .trim()
+}
+
+type DOMTreeRegistrar = {
+  registerElement(element: HTMLElement): void
+  unRegisterElement(element: HTMLElement): void
+  findElementIdx(element: HTMLElement): number
+  getPrevElement(element: HTMLElement): HTMLElement | null
+  getNextElement(element: HTMLElement): HTMLElement | null
+}
+
+const DOMTreeContext = React.createContext<DOMTreeRegistrar>(
+  {} as DOMTreeRegistrar
+)
+
+function DOMTreeProvider({ children }: React.PropsWithChildren<{}>) {
+  const [registeredElements, setRegisteredElements] = React.useState<
+    HTMLElement[]
+  >([])
+
+  const registrar = React.useMemo(
+    () => ({
+      registerElement(element: HTMLElement) {
+        setRegisteredElements((prevRegisteredElements) => {
+          // If empty, push the element at the first slot.
+          if (prevRegisteredElements.length === 0) {
+            return [element]
+          }
+
+          // Check if the element is already on the array.
+          // If yes, bail the updates.
+          const foundIdx = prevRegisteredElements.findIndex(
+            (prevElement) => prevElement === element
+          )
+          const foundElement = prevRegisteredElements[foundIdx]
+
+          if (foundElement) {
+            return prevRegisteredElements
+          }
+
+          // When registering an element, we need to make sure we insert in
+          // into the array in the same order that it appears in the DOM. So as
+          // new elements are added or maybe some are removed, we always know
+          // that the array is up-to-date and correct.
+          //
+          // So here we look at our registered elements and see if the new
+          // element we are adding appears earlier than an existing element's
+          // DOM node via `node.compareDocumentPosition`. If it does, we insert
+          // the new element at this index.
+
+          const index = prevRegisteredElements.findIndex((prevElement) => {
+            // Does this element's DOM node appear before another item in the
+            // array in our DOM tree? If so, return true to grab the index at
+            // this point in the array so we know where to insert the new
+            // element.
+            return Boolean(
+              prevElement.compareDocumentPosition(element as Node) &
+                Node.DOCUMENT_POSITION_PRECEDING
+            )
+          })
+
+          let newElements = []
+
+          // If an index is not found we will push the element to the end.
+          if (index === -1) {
+            newElements = [...prevRegisteredElements, element]
+          } else {
+            newElements = [
+              ...prevRegisteredElements.slice(0, index),
+              element,
+              ...prevRegisteredElements.slice(index),
+            ]
+          }
+
+          return newElements
+        })
+      },
+      unRegisterElement(element: HTMLElement) {
+        // Here if un-register, we need to update the tree
+        // via removing the element on the array and call setState.
+        const index = registeredElements.findIndex(
+          (prevElement) => prevElement === element
+        )
+        if (index === -1) {
+          return
+        }
+        return registeredElements.slice().splice(index, 1)
+      },
+      findElementIdx(element: HTMLElement) {
+        return registeredElements.findIndex(
+          (prevElement) => prevElement === element
+        )
+      },
+      getPrevElement(element: HTMLElement) {
+        const index = registeredElements.findIndex(
+          (prevElement) => prevElement === element
+        )
+
+        if (index === -1) {
+          return null
+        }
+
+        const prevIdx =
+          (index + registeredElements.length - 1) % registeredElements.length
+
+        return registeredElements[prevIdx]
+      },
+      getNextElement(element: HTMLElement) {
+        const index = registeredElements.findIndex(
+          (prevElement) => prevElement === element
+        )
+        if (index === -1) {
+          return null
+        }
+        const nextIdx =
+          (index + registeredElements.length + 1) % registeredElements.length
+
+        return registeredElements[nextIdx]
+      },
+    }),
+    [registeredElements]
+  )
+
+  return (
+    <DOMTreeContext.Provider value={registrar}>
+      {children}
+    </DOMTreeContext.Provider>
+  )
+}
+
 enum SingleAccordionTypes {
   tabbed = 'tabbed',
   collapsible = 'collapsible',
@@ -87,17 +234,10 @@ function AccordionButton(
     id: singleAccordionId,
   } = useSingleAccordionCtx()
   const [activeIdx, setActiveIdx] = activeIdxState
-
   const isActive = accordionItemCtx === activeIdx
 
   // The aria props are different based on the type. If the type is `collapsible`,
   // we will not add `aria-disabled` to the button.
-
-  const buttonId = createSemanticId(
-    singleAccordionId,
-    accordionItemCtx,
-    'button'
-  )
 
   const defaultAriaProps = {
     'aria-expanded': isActive,
@@ -116,12 +256,16 @@ function AccordionButton(
         }
       : { ...defaultAriaProps }
 
+  const buttonId = createSemanticId(
+    singleAccordionId,
+    accordionItemCtx,
+    'button'
+  )
+
   function handleClick() {
     if (type === SingleAccordionTypes.tabbed) {
       setActiveIdx(accordionItemCtx)
-    }
-    // If collapsible
-    else {
+    } else {
       if (isActive) {
         setActiveIdx(-1)
       } else {
@@ -130,8 +274,46 @@ function AccordionButton(
     }
   }
 
+  const domRegistrar = React.useContext(DOMTreeContext)
+  const buttonEl = React.useRef<HTMLButtonElement | null>(null)
+
+  React.useLayoutEffect(() => {
+    if (buttonEl.current) {
+      domRegistrar.registerElement(buttonEl.current)
+    }
+  }, [domRegistrar])
+
+  React.useEffect(() => {
+    if (buttonEl.current) {
+      const currentButtonEl = buttonEl.current
+      return () => domRegistrar.unRegisterElement(currentButtonEl)
+    }
+  }, [domRegistrar])
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (
+    event
+  ) => {
+    if (buttonEl.current) {
+      if (event.key === KEYBOARD_KEYS.ARROW_DOWN) {
+        const nextElement = domRegistrar.getNextElement(buttonEl.current)
+        nextElement?.focus()
+      }
+      if (event.key === KEYBOARD_KEYS.ARROW_UP) {
+        const prevElement = domRegistrar.getNextElement(buttonEl.current)
+        prevElement?.focus()
+      }
+    }
+  }
+
   return (
-    <button id={buttonId} {...ariaProps} {...props} onClick={handleClick} />
+    <button
+      ref={buttonEl}
+      id={buttonId}
+      {...ariaProps}
+      {...props}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+    />
   )
 }
 
@@ -181,9 +363,11 @@ function SingleAccordion({
     [activeIdxState, type, id]
   )
   return (
-    <SingleAccordionContext.Provider value={value}>
-      <div {...otherProps}>{children}</div>
-    </SingleAccordionContext.Provider>
+    <DOMTreeProvider>
+      <SingleAccordionContext.Provider value={value}>
+        <div {...otherProps}>{children}</div>
+      </SingleAccordionContext.Provider>
+    </DOMTreeProvider>
   )
 }
 
