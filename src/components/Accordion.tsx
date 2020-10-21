@@ -1,6 +1,7 @@
 import React from 'react'
-import { makeId } from '../utils'
+import { makeId, useForkedRef } from '../utils'
 import createDescendantsManager from './DescendantsManager'
+import { PolymorphicComp, PolymorphicOwnProps } from '../utils/types'
 
 // TODO
 // - make the AccordionPanel accepts any html like div, section or etc.
@@ -39,45 +40,44 @@ enum SingleAccordionTypes {
   collapsible = 'collapsible',
 }
 
-function SingleAccordion({
-  activeIdx = 0,
-  type = SingleAccordionTypes.tabbed,
-  children,
-  /**
-   * The prop is not required but it is recommended to pass an `id` if
-   * the page has multiple instance of `SingleAccordion`.
-   * */
-  id = 'single-accordion',
-  ...otherProps
-}: {
+type SingleAccordionProps = {
   activeIdx?: number
   type?: SingleAccordionTypes
-  // The unique id of the SingleAccordion. This is required for a lot of reasons
-  // like leveraging the support for navigation. Right now, we will just rely
-  // on an `id` beacuse I don't want to have a fancy solution for some keyboard problems.
   id?: string
-} & JSX.IntrinsicElements['div']) {
-  const activeIdxState = React.useState(activeIdx)
-  const value = React.useMemo(
-    () => ({
-      activeIdx: activeIdxState,
-      type,
-      id,
-    }),
-    [activeIdxState, type, id]
-  )
-  return (
-    <DescendantsProvider>
-      <SingleAccordionContext.Provider value={value}>
-        <div {...otherProps}>{children}</div>
-      </SingleAccordionContext.Provider>
-    </DescendantsProvider>
-  )
 }
 
-SingleAccordion.Item = AccordionItem
-SingleAccordion.Button = AccordionButton
-SingleAccordion.Panel = AccordionPanel
+const SingleAccordion: PolymorphicComp<
+  'div',
+  SingleAccordionProps
+> = React.forwardRef<Element, PolymorphicOwnProps<SingleAccordionProps>>(
+  function SingleAccordion(
+    {
+      as: Comp = 'div',
+      id = 'single-accordion',
+      activeIdx = 0,
+      type = SingleAccordionTypes.tabbed,
+      ...otherProps
+    },
+    forwardRef
+  ) {
+    const activeIdxState = React.useState(activeIdx)
+    const value = React.useMemo(
+      () => ({
+        activeIdx: activeIdxState,
+        type,
+        id,
+      }),
+      [activeIdxState, id, type]
+    )
+    return (
+      <DescendantsProvider>
+        <SingleAccordionContext.Provider value={value}>
+          <Comp ref={forwardRef} {...otherProps} />
+        </SingleAccordionContext.Provider>
+      </DescendantsProvider>
+    )
+  }
+)
 
 function useSingleAccordionCtx() {
   const ctx = React.useContext(SingleAccordionContext)
@@ -98,7 +98,14 @@ const SingleAccordionContext = React.createContext<
   | undefined
 >(undefined)
 
-function AccordionItem({ children }: AccordionItemProps) {
+const SingleAccordionItem: PolymorphicComp<
+  'div',
+  {},
+  { id: string }
+> = React.forwardRef<Element, PolymorphicOwnProps>(function SingleAccordionItem(
+  { as: Comp = 'div', ...otherProps },
+  forwardRef
+) {
   const { id: singleAccordionId } = useSingleAccordionCtx()
   const buttonEl = React.useRef<HTMLButtonElement | null>(null)
 
@@ -116,15 +123,10 @@ function AccordionItem({ children }: AccordionItemProps) {
 
   return (
     <AccordionItemContext.Provider value={ctxValue}>
-      <div id={itemId}>{children}</div>
+      <Comp ref={forwardRef} id={itemId} {...otherProps} />
     </AccordionItemContext.Provider>
   )
-}
-
-// TODO: Remove the id prop? Make the app generate its own id???
-type AccordionItemProps = React.PropsWithChildren<
-  {} & JSX.IntrinsicElements['div']
->
+})
 
 function useAccordionItemCtx() {
   const ctx = React.useContext(AccordionItemContext)
@@ -146,10 +148,14 @@ const AccordionItemContext = React.createContext<
   | undefined
 >(undefined)
 
-function AccordionButton(
-  props: Omit<JSX.IntrinsicElements['button'], 'onClick'>
+const SingleAccordionButton: PolymorphicComp<'button'> = React.forwardRef<
+  Element,
+  PolymorphicOwnProps
+>(function SingleAccordionButton(
+  { as: Comp = 'button', ...otherProps },
+  forwardRef
 ) {
-  const { idx, buttonRef, buttonId, panelId } = useAccordionItemCtx()
+  const { idx, buttonRef: ownRef, buttonId, panelId } = useAccordionItemCtx()
   const { activeIdx: activeIdxState, type } = useSingleAccordionCtx()
   const [activeIdx, setActiveIdx] = activeIdxState
   const isActive = idx === activeIdx
@@ -182,42 +188,60 @@ function AccordionButton(
     }
   }
 
+  const ref = useForkedRef(ownRef, forwardRef)
+
   const handleKeyDown = useDescendantKeydown<HTMLButtonElement>({
-    element: buttonRef.current,
+    element: ownRef.current,
   })
 
   return (
-    <button
-      ref={buttonRef}
-      {...props}
+    <Comp
+      ref={ref}
+      {...otherProps}
       {...ariaProps}
       id={buttonId}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     />
   )
+})
+
+const SingleAccordionPanel: PolymorphicComp<
+  'div',
+  {},
+  { id: string }
+> = React.forwardRef<Element, PolymorphicOwnProps>(
+  function SingleAccordionPanel(
+    { as: Comp = 'div', ...otherProps },
+    forwardRef
+  ) {
+    const { idx, panelId, buttonId } = useAccordionItemCtx()
+    const { activeIdx: activeIdxState } = useSingleAccordionCtx()
+    const [activeIdx] = activeIdxState
+
+    return (
+      <Comp
+        ref={forwardRef}
+        {...otherProps}
+        /**
+         * Some screen readers when using "Up" and "Down" keys, it will not
+         * jump the focus on next accordion header, but will jump to the active panel.
+         * Because of this, we will make this "div" focusable.
+         * */
+        tabIndex={-1}
+        aria-labelledby={buttonId}
+        id={panelId}
+        hidden={idx !== activeIdx}
+        role="region"
+      />
+    )
+  }
+)
+
+export {
+  SingleAccordion,
+  SingleAccordionButton,
+  SingleAccordionItem,
+  SingleAccordionPanel,
+  SingleAccordionTypes,
 }
-
-function AccordionPanel(props: JSX.IntrinsicElements['div']) {
-  const { idx, panelId, buttonId } = useAccordionItemCtx()
-  const { activeIdx: activeIdxState } = useSingleAccordionCtx()
-  const [activeIdx] = activeIdxState
-
-  return (
-    <div
-      {...props}
-      /**
-       * Some screen readers when using "Up" and "Down" keys, it will not
-       * jump the focus on next accordion header, but will jump to the active panel.
-       * Because of this, we will make this "div" focusable.
-       * */
-      tabIndex={-1}
-      aria-labelledby={buttonId}
-      id={panelId}
-      hidden={idx !== activeIdx}
-      role="region"
-    />
-  )
-}
-
-export { SingleAccordion, SingleAccordionTypes }
