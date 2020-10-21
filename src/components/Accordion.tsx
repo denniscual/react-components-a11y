@@ -1,23 +1,7 @@
 import React from 'react'
-import { makeId, useForkedRef } from '../utils'
 import createDescendantsManager from './DescendantsManager'
+import { makeId, useForkedRef, wrapEventHandler } from '../utils'
 import { PolymorphicComp, PolymorphicOwnProps } from '../utils/types'
-
-// TODO
-// - make the AccordionPanel accepts any html like div, section or etc.
-// - handle the ref
-// - make some Components polymorphic in terms of their rendered root elements.
-
-/**
- * WAI-ARIA Accordion specs - https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
- * */
-
-/**
- *
- * The `AccordionPanel` returns an host elemnt without a `role` prop. The user will decide if he/she
- * gonna add it or now. There is section on the WAI-ARIA Accordion specs which talks about the
- * the "cons" of using a region role. - https://www.w3.org/TR/wai-aria-practices-1.2/#wai-aria-roles-states-and-properties
- * */
 
 // ---------------------------------------- //
 // ---------------------------------------- //
@@ -148,8 +132,8 @@ const AccordionItemContext = React.createContext<
   | undefined
 >(undefined)
 
-const SingleAccordionButton: PolymorphicComp<'button'> = React.forwardRef<
-  Element,
+const SingleAccordionButton: PolymorphicComp<'button', {}> = React.forwardRef<
+  HTMLButtonElement,
   PolymorphicOwnProps
 >(function SingleAccordionButton(
   { as: Comp = 'button', ...otherProps },
@@ -176,6 +160,8 @@ const SingleAccordionButton: PolymorphicComp<'button'> = React.forwardRef<
         }
       : { ...defaultAriaProps }
 
+  const ref = useForkedRef(ownRef, forwardRef)
+
   function handleClick() {
     if (type === SingleAccordionTypes.tabbed) {
       setActiveIdx(idx)
@@ -188,11 +174,19 @@ const SingleAccordionButton: PolymorphicComp<'button'> = React.forwardRef<
     }
   }
 
-  const ref = useForkedRef(ownRef, forwardRef)
+  // @ts-ignore Accessing `otherProps.onClick` will throw an error
+  // because it is not defined on the props.
+  const wrappedClickHandler = wrapEventHandler(otherProps.onClick, handleClick)
 
   const handleKeyDown = useDescendantKeydown<HTMLButtonElement>({
     element: ownRef.current,
   })
+  const wrappedKeyDownHandler = wrapEventHandler(
+    // @ts-ignore Accessing `otherProps.onKeyDown` will throw an error
+    // because it is not defined on the props.
+    otherProps.onKeyDown,
+    handleKeyDown
+  )
 
   return (
     <Comp
@@ -200,8 +194,8 @@ const SingleAccordionButton: PolymorphicComp<'button'> = React.forwardRef<
       {...otherProps}
       {...ariaProps}
       id={buttonId}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+      onClick={wrappedClickHandler}
+      onKeyDown={wrappedKeyDownHandler}
     />
   )
 })

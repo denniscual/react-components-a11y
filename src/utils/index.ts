@@ -131,6 +131,28 @@ export type AssignableRef<ValueType> =
     }['bivarianceHack']
   | React.MutableRefObject<ValueType | null>
 
+/**
+ * Wraps a lib-defined event handler and a user-defined event handler, returning
+ * a single handler that allows a user to prevent lib-defined handlers from
+ * firing.
+ *
+ * @param theirHandler User-supplied event handler
+ * @param ourHandler Library-supplied event handler
+ */
+function wrapEventHandler<EventType extends React.SyntheticEvent | Event>(
+  theirHandler: ((event: EventType) => any) | undefined,
+  ourHandler: (event: EventType) => any
+): (event: EventType) => any {
+  return (event) => {
+    theirHandler && theirHandler(event)
+    // check if in inside the `theirHandler` stops the event propagation of the lib-defined handler like `event.stopPropagation`.
+    // If not call, we gonna call the 2 handlers including the lib-defined.
+    if (!event.defaultPrevented) {
+      return ourHandler(event)
+    }
+  }
+}
+
 export {
   useIsomorphicLayoutEffect,
   useForceUpdate,
@@ -140,4 +162,5 @@ export {
   isFunction,
   assignRef,
   useForkedRef,
+  wrapEventHandler,
 }
