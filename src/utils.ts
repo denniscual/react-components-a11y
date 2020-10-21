@@ -40,4 +40,34 @@ function canUseDOM() {
   )
 }
 
-export { useIsomorphicLayoutEffect, canUseDOM }
+function useForceUpdate() {
+  const [, dispatch] = React.useReducer((s: number) => s + 1, 0)
+  return dispatch
+}
+
+function makeId(label: string, anotherLabel: number | string) {
+  return `${label}-${anotherLabel}`
+}
+
+function useLazyRef<T>(cb: () => T) {
+  const lazyRef = React.useRef<T | null>(null)
+  if (!lazyRef.current) {
+    lazyRef.current = cb()
+  }
+  return lazyRef.current
+}
+
+function classNames(...classNames: string[]) {
+  return classNames
+    .filter(Boolean)
+    .reduce((acc, value) => acc.concat(` ${value}`), '')
+    .trim()
+}
+
+export {
+  useIsomorphicLayoutEffect,
+  useForceUpdate,
+  makeId,
+  classNames,
+  useLazyRef,
+}
