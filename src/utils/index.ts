@@ -1,4 +1,5 @@
 import React from 'react'
+import forwardRefWithAs from './forwardRefWithAs'
 
 /**
  * React currently throws a warning when using useLayoutEffect on the server.
@@ -163,4 +164,5 @@ export {
   assignRef,
   useForkedRef,
   wrapEventHandler,
+  forwardRefWithAs,
 }

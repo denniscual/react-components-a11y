@@ -8,16 +8,13 @@ import {
 } from './components/Accordion'
 
 function App() {
-  const ref = React.useRef<HTMLButtonElement | null>(null)
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
         <SingleAccordion>
           <SingleAccordionItem>
             <h3>
-              <SingleAccordionButton ref={ref}>
-                Irish biography
-              </SingleAccordionButton>
+              <SingleAccordionButton>Irish biography</SingleAccordionButton>
             </h3>
             <SingleAccordionPanel>
               <h4>My biography</h4>
@@ -30,7 +27,7 @@ function App() {
             </h3>
             <SingleAccordionPanel>
               <h4>My biography</h4>
-              <p>Zion is the son of the great Irish and Dennis</p>
+              <p>Zion is the son of the great Irish and Gwapo Dennis</p>
             </SingleAccordionPanel>
           </SingleAccordionItem>
           <SingleAccordionItem>
