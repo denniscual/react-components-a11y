@@ -1,11 +1,13 @@
 import React from 'react'
-import createDescendantsManager from './DescendantsManager'
+import createDescendantsManager from '../DescendantsManager'
 import {
   makeId,
   useForkedRef,
   wrapEventHandler,
   forwardRefWithAs,
-} from '../utils'
+} from '../../utils'
+
+// TODO: Add documentation from the accessiblity.
 
 // ---------------------------------------- //
 // ---------------------------------------- //
@@ -13,7 +15,8 @@ import {
 //
 // The Accordion only shows 0 or 1 panel at a time. This is distinguished by the `type`.
 // As default, SingleAccordion will always shows 1 panel a time. But this can be change
-// by passing a `type` value `collapsible`. In this behaviour, the Accordion can show atleast 0 or 1 panel.
+// by passing a `type` value `collapsible`. In this behaviour, the Accordion can show atleast 0 or 1 panel and also
+// the active panel can collapse itself.
 // -----------------------------------------//
 // -----------------------------------------//
 
@@ -136,6 +139,22 @@ const AccordionItemContext = React.createContext<
   | undefined
 >(undefined)
 
+/**
+ *  Each accordion header `button` is wrapped in an element with role
+ *  `heading` that has a value set for `aria-level` that is appropriate
+ *  for the information architecture of the page.
+ *  https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
+ *  I believe this should be left for apps to handle, since headings
+ *  are necessarily context-aware. An app can wrap a button inside any
+ *  arbitrary tag(s).
+ *
+ * @example
+ * <div>
+ *   <h3>
+ *     <AccordionButton>Click Me</AccordionButton>
+ *   </h3>
+ * </div>
+ * */
 const SingleAccordionButton = forwardRefWithAs<HTMLButtonElement, {}, 'button'>(
   function SingleAccordionButton(
     { as: Comp = 'button', ...otherProps },
@@ -148,9 +167,18 @@ const SingleAccordionButton = forwardRefWithAs<HTMLButtonElement, {}, 'button'>(
 
     // The aria props are different based on the type. If the type is `collapsible`,
     // we will not add `aria-disabled` to the button.
-
     const defaultAriaProps = {
+      /**
+       * If the accordion panel associated with an accordion header is visible, the header
+       * button element has aria-expanded set to true. If the panel is not visible, aria-expanded is set to false.
+       * https://www.w3.org/TR/wai-aria-practices-1.2/#wai-aria-roles-states-and-properties
+       * */
       'aria-expanded': isActive,
+      /**
+       * The accordion header button element has aria-controls set to the ID of the element
+       * containing the accordion panel content.
+       * https://www.w3.org/TR/wai-aria-practices-1.2/#wai-aria-roles-states-and-properties
+       * */
       'aria-controls': panelId,
     }
 
@@ -158,6 +186,11 @@ const SingleAccordionButton = forwardRefWithAs<HTMLButtonElement, {}, 'button'>(
       type === SingleAccordionTypes.tabbed
         ? {
             ...defaultAriaProps,
+            /**
+             * If the accordion panel associated with an accordion header is visible, and if the accordion
+             * does not permit the panel to be collapsed, the header button element has aria-disabled set to true.
+             * https://www.w3.org/TR/wai-aria-practices-1.2/#wai-aria-roles-states-and-properties
+             * */
             'aria-disabled': isActive,
           }
         : { ...defaultAriaProps }
@@ -176,8 +209,6 @@ const SingleAccordionButton = forwardRefWithAs<HTMLButtonElement, {}, 'button'>(
       }
     }
 
-    // @ts-ignore Accessing `otherProps.onClick` will throw an error
-    // because it is not defined on the props.
     const wrappedClickHandler = wrapEventHandler(
       otherProps.onClick,
       handleClick
@@ -187,8 +218,6 @@ const SingleAccordionButton = forwardRefWithAs<HTMLButtonElement, {}, 'button'>(
       element: ownRef.current,
     })
     const wrappedKeyDownHandler = wrapEventHandler(
-      // @ts-ignore Accessing `otherProps.onKeyDown` will throw an error
-      // because it is not defined on the props.
       otherProps.onKeyDown,
       handleKeyDown
     )
@@ -206,6 +235,16 @@ const SingleAccordionButton = forwardRefWithAs<HTMLButtonElement, {}, 'button'>(
   }
 )
 
+/**
+ * Section of content associated with an accordion header.
+ *
+ * @example
+ * <div>
+ *   <h3>
+ *     <AccordionButton>Click Me</AccordionButton>
+ *   </h3>
+ * </div>
+ * */
 const SingleAccordionPanel = forwardRefWithAs<
   HTMLDivElement,
   {},
@@ -237,10 +276,11 @@ const SingleAccordionPanel = forwardRefWithAs<
   )
 })
 
-export {
-  SingleAccordion,
-  SingleAccordionButton,
-  SingleAccordionItem,
-  SingleAccordionPanel,
-  SingleAccordionTypes,
+const api = {
+  Accordion: SingleAccordion,
+  Item: SingleAccordionItem,
+  Button: SingleAccordionButton,
+  Panel: SingleAccordionPanel,
 }
+
+export { api as default, SingleAccordionTypes }

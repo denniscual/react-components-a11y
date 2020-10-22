@@ -1,54 +1,49 @@
 import React from 'react'
 import styles from './App.module.css'
-import {
-  SingleAccordion,
-  SingleAccordionItem,
-  SingleAccordionPanel,
-  SingleAccordionButton,
-} from './components/Accordion'
+import { SingleAccordion } from './components/accordion'
 
 function App() {
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
-        <SingleAccordion>
-          <SingleAccordionItem>
+        <SingleAccordion.Accordion>
+          <SingleAccordion.Item>
             <h3>
-              <SingleAccordionButton>Irish biography</SingleAccordionButton>
+              <SingleAccordion.Button>Irish biography</SingleAccordion.Button>
             </h3>
-            <SingleAccordionPanel>
+            <SingleAccordion.Panel>
               <h4>My biography</h4>
               <p>Irish is the son of the great Berto and Chenglylyly</p>
-            </SingleAccordionPanel>
-          </SingleAccordionItem>
-          <SingleAccordionItem>
+            </SingleAccordion.Panel>
+          </SingleAccordion.Item>
+          <SingleAccordion.Item>
             <h3>
-              <SingleAccordionButton>Zion biography</SingleAccordionButton>
+              <SingleAccordion.Button>Zion biography</SingleAccordion.Button>
             </h3>
-            <SingleAccordionPanel>
+            <SingleAccordion.Panel>
               <h4>My biography</h4>
               <p>Zion is the son of the great Irish and Gwapo Dennis</p>
-            </SingleAccordionPanel>
-          </SingleAccordionItem>
-          <SingleAccordionItem>
+            </SingleAccordion.Panel>
+          </SingleAccordion.Item>
+          <SingleAccordion.Item>
             <h3>
-              <SingleAccordionButton>Dennis biography</SingleAccordionButton>
+              <SingleAccordion.Button>Dennis biography</SingleAccordion.Button>
             </h3>
-            <SingleAccordionPanel>
+            <SingleAccordion.Panel>
               <h4>My biography</h4>
               <p>Dennis is the son of the great Edna and Cesar</p>
-            </SingleAccordionPanel>
-          </SingleAccordionItem>
-          <SingleAccordionItem>
+            </SingleAccordion.Panel>
+          </SingleAccordion.Item>
+          <SingleAccordion.Item>
             <h3>
-              <SingleAccordionButton>Samson biography</SingleAccordionButton>
+              <SingleAccordion.Button>Samson biography</SingleAccordion.Button>
             </h3>
-            <SingleAccordionPanel>
+            <SingleAccordion.Panel>
               <h4>My biography</h4>
               <p>Samson is the son of the great Ningning</p>
-            </SingleAccordionPanel>
-          </SingleAccordionItem>
-        </SingleAccordion>
+            </SingleAccordion.Panel>
+          </SingleAccordion.Item>
+        </SingleAccordion.Accordion>
       </div>
     </div>
   )
