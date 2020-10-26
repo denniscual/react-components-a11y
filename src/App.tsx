@@ -1,49 +1,96 @@
 import React from 'react'
 import styles from './App.module.css'
-import { MultiAccordion } from './components/accordion'
+import {
+  SingleAccordion,
+  MultiAccordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionType,
+} from './components/accordion'
 
 function App() {
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
-        <MultiAccordion.Accordion activeIdx={[0, 1]}>
-          <MultiAccordion.Item>
+        <SingleAccordion type={AccordionType.collapsible}>
+          <AccordionItem>
             <h3>
-              <MultiAccordion.Button>Irish biography</MultiAccordion.Button>
+              <AccordionButton>Irish biography</AccordionButton>
             </h3>
-            <MultiAccordion.Panel>
+            <AccordionPanel>
               <h4>My biography</h4>
               <p>Irish is the son of the great Berto and Chenglylyly</p>
-            </MultiAccordion.Panel>
-          </MultiAccordion.Item>
-          <MultiAccordion.Item>
+            </AccordionPanel>
+          </AccordionItem>
+          <AccordionItem>
             <h3>
-              <MultiAccordion.Button>Zion biography</MultiAccordion.Button>
+              <AccordionButton>Zion biography</AccordionButton>
             </h3>
-            <MultiAccordion.Panel>
+            <AccordionPanel>
               <h4>My biography</h4>
               <p>Zion is the son of the great Irish and Gwapo Dennis</p>
-            </MultiAccordion.Panel>
-          </MultiAccordion.Item>
-          <MultiAccordion.Item>
+            </AccordionPanel>
+          </AccordionItem>
+          <AccordionItem>
             <h3>
-              <MultiAccordion.Button>Dennis biography</MultiAccordion.Button>
+              <AccordionButton>Dennis biography</AccordionButton>
             </h3>
-            <MultiAccordion.Panel>
+            <AccordionPanel>
               <h4>My biography</h4>
               <p>Dennis is the son of the great Edna and Cesar</p>
-            </MultiAccordion.Panel>
-          </MultiAccordion.Item>
-          <MultiAccordion.Item>
+            </AccordionPanel>
+          </AccordionItem>
+          <AccordionItem>
             <h3>
-              <MultiAccordion.Button>Samson biography</MultiAccordion.Button>
+              <AccordionButton>Samson biography</AccordionButton>
             </h3>
-            <MultiAccordion.Panel>
+            <AccordionPanel>
               <h4>My biography</h4>
               <p>Samson is the son of the great Ningning</p>
-            </MultiAccordion.Panel>
-          </MultiAccordion.Item>
-        </MultiAccordion.Accordion>
+            </AccordionPanel>
+          </AccordionItem>
+        </SingleAccordion>
+      </div>
+      <div className={styles.Content}>
+        <MultiAccordion>
+          <AccordionItem>
+            <h3>
+              <AccordionButton>Irish biography</AccordionButton>
+            </h3>
+            <AccordionPanel>
+              <h4>My biography</h4>
+              <p>Irish is the son of the great Berto and Chenglylyly</p>
+            </AccordionPanel>
+          </AccordionItem>
+          <AccordionItem>
+            <h3>
+              <AccordionButton>Zion biography</AccordionButton>
+            </h3>
+            <AccordionPanel>
+              <h4>My biography</h4>
+              <p>Zion is the son of the great Irish and Gwapo Dennis</p>
+            </AccordionPanel>
+          </AccordionItem>
+          <AccordionItem>
+            <h3>
+              <AccordionButton>Dennis biography</AccordionButton>
+            </h3>
+            <AccordionPanel>
+              <h4>My biography</h4>
+              <p>Dennis is the son of the great Edna and Cesar</p>
+            </AccordionPanel>
+          </AccordionItem>
+          <AccordionItem>
+            <h3>
+              <AccordionButton>Samson biography</AccordionButton>
+            </h3>
+            <AccordionPanel>
+              <h4>My biography</h4>
+              <p>Samson is the son of the great Ningning</p>
+            </AccordionPanel>
+          </AccordionItem>
+        </MultiAccordion>
       </div>
     </div>
   )
