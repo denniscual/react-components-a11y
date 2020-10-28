@@ -7,8 +7,6 @@ import {
   wrapEventHandler,
 } from '../../utils'
 
-// TODO: Its good that some Components can accept event like `onChange`, etc. Check reach-ui.
-
 export enum AccordionType {
   tabbed = 'tabbed',
   collapsible = 'collapsible',
