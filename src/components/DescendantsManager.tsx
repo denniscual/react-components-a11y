@@ -156,7 +156,7 @@ export default function createDescendantsManager(name: string) {
         return
       }
       registerElement(element)
-    }, [registerElement, element])
+    }, [registerElement, element, forceUpdate])
 
     return descendantIndex
   }
