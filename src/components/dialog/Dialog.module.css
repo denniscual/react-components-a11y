@@ -1,0 +1,20 @@
+.DialogOverlay {
+  background: rgba(0, 0, 0, 0.33);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: auto;
+}
+
+.DialogContainer {
+  background-color: #ffffff;
+  position: relative;
+  /* padding-top: 40px; */
+  width: 50vw;
+  margin: 10vh auto;
+  background: #fff;
+  padding: 2rem;
+  outline: none;
+}

@@ -1,10 +1,12 @@
 import React, { PropsWithChildren } from 'react'
 import { createPortal } from 'react-dom'
-import { useIsomorphicLayoutEffect, useForceUpdate } from '../utils'
-
-export default function Dialog() {
-  return <Portal>Dialog</Portal>
-}
+import {
+  useIsomorphicLayoutEffect,
+  useForceUpdate,
+  forwardRefWithAs,
+} from '../../utils'
+import { FocusOn } from 'react-focus-on'
+import styles from './Dialog.module.css'
 
 function Portal({ as = 'div', children }: PropsWithChildren<{ as?: string }>) {
   const forceUpdate = useForceUpdate()
@@ -15,8 +17,8 @@ function Portal({ as = 'div', children }: PropsWithChildren<{ as?: string }>) {
 
     // append the parent root to the body
     document.body.appendChild(_parentEl)
-    forceUpdate()
     parentEl.current = _parentEl
+    forceUpdate()
 
     return () => {
       // when the Component is unmounted, remove the attached element.
@@ -38,3 +40,34 @@ function Portal({ as = 'div', children }: PropsWithChildren<{ as?: string }>) {
    * */
   return parentEl.current ? createPortal(children, parentEl.current) : null
 }
+
+const Dialog = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Dialog(
+  { as: Comp = 'div', children, ...otherProps },
+  forwardRef
+) {
+  return (
+    <Portal>
+      <FocusOn className={styles.DialogOverlay}>
+        <Comp
+          {...otherProps}
+          ref={forwardRef}
+          className={styles.DialogContainer}
+          /**
+           * The element that serves as the dialog container has a role of dialog.
+           * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
+           * */
+          role="dialog"
+          /**
+           * The dialog container element has aria-modal set to true.
+           * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
+           * */
+          aria-modal={true}
+        >
+          {children}
+        </Comp>
+      </FocusOn>
+    </Portal>
+  )
+})
+
+export { Dialog as default }
