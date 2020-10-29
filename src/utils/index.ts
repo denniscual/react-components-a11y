@@ -154,6 +154,18 @@ function wrapEventHandler<EventType extends React.SyntheticEvent | Event>(
   }
 }
 
+const KEYBOARD_KEYS = {
+  ARROW_DOWN: 'ArrowDown',
+  ARROW_UP: 'ArrowUp',
+  ARROW_LEFT: 'ArrowLeft',
+  ARROW_RIGHT: 'ArrowRight',
+  PAGE_UP: 'PageUp',
+  PAGE_DOWN: 'PageDown',
+  HOME: 'Home',
+  END: 'End',
+  ESCAPE: 'Escape',
+}
+
 export {
   useIsomorphicLayoutEffect,
   useForceUpdate,
@@ -165,4 +177,5 @@ export {
   useForkedRef,
   wrapEventHandler,
   forwardRefWithAs,
+  KEYBOARD_KEYS,
 }

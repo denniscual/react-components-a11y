@@ -4,6 +4,7 @@ import {
   useIsomorphicLayoutEffect,
   useForceUpdate,
   forwardRefWithAs,
+  KEYBOARD_KEYS,
 } from '../../utils'
 import { FocusOn } from 'react-focus-on'
 import styles from './Dialog.module.css'
@@ -70,16 +71,44 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
       }
     }
 
-    const handleKeyDown: React.MouseEventHandler<HTMLDivElement> = (event) => {}
+    /**
+     * Hitting Escape key must close the dialog.
+     * https://www.w3.org/TR/wai-aria-practices-1.2/#keyboard-interaction-7
+     * */
+    const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (
+      event
+    ) => {
+      if (event.key === KEYBOARD_KEYS.ESCAPE) {
+        event.stopPropagation()
+        onClose()
+      }
+    }
 
     return isOpen ? (
       <Portal>
-        <FocusOn returnFocus>
+        {/**
+         * Windows under a modal dialog are inert. That is, users cannot interact with content outside
+         * an active dialog window. Inert content outside an active dialog is typically visually obscured
+         * or dimmed so it is difficult to discern, and in some implementations, attempts to
+         * interact with the inert content cause the dialog to close.
+         *
+         * */}
+        <FocusOn
+          /**
+           * This will return the focus to the element who open the dialog like `button`.
+           * */
+          returnFocus
+        >
           <div
+            /**
+             * Don't worry, this `div` element can't accept focus. We add this element
+             * inside the `FocusOn` to be able we can close the dialog when clicking to itself and achieve the styles we want.
+             * */
             onClick={handleClick}
             onMouseDown={handleMouseDown}
             ref={inertContainerRef}
-            className={styles.InertContainer}
+            className={styles.DialogOverlay}
+            onKeyDown={handleKeyDown}
           >
             <Comp
               {...otherProps}
@@ -106,23 +135,6 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
 interface DialogProps {
   isOpen: boolean
   onClose(): void
-}
-
-/**
- * Windows under a modal dialog are inert. That is, users cannot interact with content outside
- * an active dialog window. Inert content outside an active dialog is typically visually obscured
- * or dimmed so it is difficult to discern, and in some implementations, attempts to
- * interact with the inert content cause the dialog to close.
- *
- * */
-const InertContainer = function InertContainer({
-  children,
-}: PropsWithChildren<{}>) {
-  return (
-    <Portal>
-      <div className={styles.InertContainer}>{children}</div>
-    </Portal>
-  )
 }
 
 export { Dialog as default }

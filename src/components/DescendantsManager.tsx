@@ -1,5 +1,9 @@
 import React from 'react'
-import { useIsomorphicLayoutEffect, useForceUpdate } from '../utils'
+import {
+  useIsomorphicLayoutEffect,
+  useForceUpdate,
+  KEYBOARD_KEYS,
+} from '../utils'
 
 export default function createDescendantsManager(name: string) {
   const DescendantsContext = React.createContext<DescendantsProps>(
@@ -228,15 +232,4 @@ export type DescendantsProps = {
   getNextElement(element: HTMLElement): HTMLElement | null
   getHead(): HTMLElement | null
   getTail(): HTMLElement | null
-}
-
-const KEYBOARD_KEYS = {
-  ARROW_DOWN: 'ArrowDown',
-  ARROW_UP: 'ArrowUp',
-  ARROW_LEFT: 'ArrowLeft',
-  ARROW_RIGHT: 'ArrowRight',
-  PAGE_UP: 'PageUp',
-  PAGE_DOWN: 'PageDown',
-  HOME: 'Home',
-  END: 'End',
 }
