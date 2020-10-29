@@ -9,6 +9,28 @@ import {
 import { FocusOn } from 'react-focus-on'
 import styles from './Dialog.module.css'
 
+// TODO: Add aria-hidden to true to all inert elements to prevent screen readers read the conent.
+
+/**
+ * Keyboard interactions (https://www.w3.org/TR/wai-aria-practices-1.2/#keyboard-interaction-7):
+ * - When a dialog opens, focus moves to an element inside the dialog. About whats element will be the initial
+ *   focused, it depends on the case. ✅
+ * - Tab:
+ *   * Moves focus to the next tabbable element inside the dialog. ✅
+ *   * If focus is on the last tabbable element inside the dialog, moves focus  *     to the first.
+ *     tabbable element inside the dialog. ✅
+ * - Shift + Tab:
+ *   * Moves focus to the previous tabbable element inside the dialog.
+ *   * If focus is on the first tabbable element inside the dialog, moves
+ *     focus to the last tabbable element inside the dialog. ✅
+ * - Escape:
+ *   * Closes the dialog. ✅
+ *
+ * WAI-ARIA Roles, States, and Properties (https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props)
+ * - The element that serves as the dialog container has a role of dialog. ✅
+ * - The dialog container element has aria-modal set to true.✅
+ * */
+
 function Portal({ as = 'div', children }: PropsWithChildren<{ as?: string }>) {
   const forceUpdate = useForceUpdate()
   const parentEl = React.useRef<HTMLDivElement | null>(null)
@@ -44,11 +66,29 @@ function Portal({ as = 'div', children }: PropsWithChildren<{ as?: string }>) {
 
 const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
   function Dialog(
-    { as: Comp = 'div', isOpen, onClose, ...otherProps },
+    {
+      as: Comp = 'div',
+      disableAutoFocus = false,
+      initElementFocusRef,
+      isOpen,
+      onClose,
+      ...otherProps
+    },
     forwardRef
   ) {
     const inertContainerRef = React.useRef<HTMLDivElement | null>(null)
     const mouseDownEventTargetRef = React.useRef<EventTarget | null>(null)
+
+    // We use this to override the initial focus element.
+    const handleLockActivation = React.useCallback(
+      function handleLockActivation() {
+        // It will only override the initial focus element if the `disableAutoFocus` is set to `true`.
+        if (disableAutoFocus) {
+          initElementFocusRef?.current?.focus()
+        }
+      },
+      [initElementFocusRef, disableAutoFocus]
+    )
 
     /**
      * We use the handleMouseDown and handleClick handlers for closing the modal
@@ -92,21 +132,32 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
          * or dimmed so it is difficult to discern, and in some implementations, attempts to
          * interact with the inert content cause the dialog to close.
          *
+         * Like non-modal dialogs, modal dialogs contain their tab sequence. That is, Tab and Shift + Tab
+         * do not move focus outside the dialog. However, unlike most non-modal dialogs,
+         * modal dialogs do not provide means for moving keyboard focus outside the dialog window without closing
+         * the dialog.
+         *
+         * With this, we use a React library to handle the focus lock and body scroll lock.
+         * https://github.com/theKashey/react-focus-on
+         *
          * */}
         <FocusOn
+          // In all circumstances, focus moves to an element contained in the dialog.
+          autoFocus={!disableAutoFocus}
           /**
            * This will return the focus to the element who open the dialog like `button`.
            * */
           returnFocus
+          onActivation={handleLockActivation}
         >
           <div
+            ref={inertContainerRef}
             /**
              * Don't worry, this `div` element can't accept focus. We add this element
              * inside the `FocusOn` to be able we can close the dialog when clicking to itself and achieve the styles we want.
              * */
             onClick={handleClick}
             onMouseDown={handleMouseDown}
-            ref={inertContainerRef}
             className={styles.DialogOverlay}
             onKeyDown={handleKeyDown}
           >
@@ -135,6 +186,16 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
 interface DialogProps {
   isOpen: boolean
   onClose(): void
+  /**
+   * If we want to enable or disable the autoFocus to the Dialog content.
+   * Defaulted to `false`. Read more about this https://github.com/theKashey/react-focus-lock#autofocus
+   *
+   * We give the user a chance to override the initial focus element because thats a11y said about the focus placement!
+   * https://www.w3.org/TR/wai-aria-practices-1.2/#keyboard-interaction-7
+   *
+   * */
+  disableAutoFocus?: boolean
+  initElementFocusRef?: React.RefObject<HTMLElement>
 }
 
 export { Dialog as default }

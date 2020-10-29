@@ -13,6 +13,21 @@ function App() {
     <div className={styles.Container}>
       <div className={styles.Content}>
         <button onClick={() => setIsOpen(true)}>Open dialog</button>
+        <p>
+          Quae, perferendis do ornare, dicta interdum, neque, excepteur! Eos
+          quasi! Tempor primis quis quaerat! Aperiam rerum aperiam. Convallis
+          eleifend, adipisci, duis habitant enim dolore. Id pharetra! Proin
+          officiis, corrupti cubilia perspiciatis venenatis. Laboris felis
+          suspendisse urna? Pharetra deleniti, duis voluptas vulputate lorem
+          veniam? Fugiat assumenda, illo expedita rutrum! Justo aperiam
+          temporibus ligula, vero magnis delectus massa? Velit rerum quod
+          distinctio, urna penatibus qui? Numquam, facilisis! Assumenda?
+          Adipiscing varius voluptatibus conubia maecenas semper, taciti
+          necessitatibus at, vitae nascetur, nascetur arcu. Exercitationem,
+          consectetuer? Perspiciatis aliquid libero ut facere facere parturient!
+          Ullamcorper rutrum, porttitor officia nulla sunt ipsam primis! Minus
+          ipsa delectus officia.
+        </p>
         <Dialog
           isOpen={isOpen}
           onClose={handleCloseDialog}
@@ -22,22 +37,18 @@ function App() {
           <button onClick={handleCloseDialog}>Close</button>
           <h1 id="dialog-title">Dialog title</h1>
           <p id="dialog-desc">Dialog description</p>
+          <div>
+            <label>
+              Username
+              <input type="text" />
+            </label>
+            <label>
+              Password
+              <input type="password" />
+            </label>
+          </div>
         </Dialog>
       </div>
-      <p>
-        Soluta excepturi praesent cursus eos, varius beatae hymenaeos, neque
-        ipsa proin dictumst perferendis quibusdam laoreet diamlorem nostra
-        necessitatibus eaque iaculis cras rerum pede deleniti, cupidatat
-        distinctio, ante conubia volutpat repudiandae? Distinctio dapibus
-        viverra aliquam morbi magni repudiandae dapibus labore cubilia. Sit
-        eveniet, nunc quod ipsam. At autem exercitationem ipsa ullamco molestie,
-        accusantium per taciti sit numquam, duis tellus morbi praesentium,
-        diamlorem hendrerit, metus. Facilisi? Massa, ullamco ultrices iure esse
-        eu nostra tortor, nihil volutpat accumsan nostra minima pretium, ab
-        ipsum diam. Gravida reiciendis quisquam, praesentium delectus, nisl
-        velit? Potenti corporis, amet? Sociis diam venenatis penatibus
-        fermentum. Libero eligendi. Vel egestas.
-      </p>
     </div>
   )
 }
