@@ -1,5 +1,5 @@
-import React from 'react'
-import { forwardRefWithAs, KEYBOARD_KEYS } from '../../utils'
+import React, { useLayoutEffect, useCallback, useRef, useEffect } from 'react'
+import { forwardRefWithAs, KEYBOARD_KEYS, useForkedRef } from '../../utils'
 import { FocusOn } from 'react-focus-on'
 import styles from './Dialog.module.css'
 import Portal from '../Portal'
@@ -38,11 +38,14 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
     },
     forwardRef
   ) {
-    const inertContainerRef = React.useRef<HTMLDivElement | null>(null)
-    const mouseDownEventTargetRef = React.useRef<EventTarget | null>(null)
+    const dialogOverlayRef = useRef<HTMLDivElement | null>(null)
+    const mouseDownEventTargetRef = useRef<EventTarget | null>(null)
+    // Dialog ref
+    const dialogRef = React.useRef<HTMLDivElement | null>(null)
+    const ref = useForkedRef(dialogRef, forwardRef)
 
     // We use this to override the initial focus element.
-    const handleLockActivation = React.useCallback(
+    const handleLockActivation = useCallback(
       function handleLockActivation() {
         // It will only override the initial focus element if the `disableAutoFocus` is set to `true`.
         if (disableAutoFocus) {
@@ -86,6 +89,16 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
       }
     }
 
+    /**
+     * We are using the passive effect (useEffect) not the sync effect (useLayoutEffect`) to avoid blocking the thread
+     * while traversing an elements and possible setting of attributes.
+     * */
+    useEffect(() => {
+      if (dialogRef.current) {
+        return handleElementsAriaHidden(dialogRef.current)
+      }
+    }, [])
+
     return isOpen ? (
       <Portal>
         {/**
@@ -113,7 +126,7 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
           onActivation={handleLockActivation}
         >
           <div
-            ref={inertContainerRef}
+            ref={dialogOverlayRef}
             /**
              * Don't worry, this `div` element can't accept focus. We add this element
              * inside the `FocusOn` to be able we can close the dialog when clicking to itself and achieve the styles we want.
@@ -125,7 +138,7 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
           >
             <Comp
               {...otherProps}
-              ref={forwardRef}
+              ref={ref}
               className={styles.DialogContainer}
               /**
                * The element that serves as the dialog container has a role of dialog.
@@ -158,6 +171,60 @@ interface DialogProps {
    * */
   disableAutoFocus?: boolean
   initElementFocusRef?: React.RefObject<HTMLElement>
+}
+
+/**
+ * This would handle the elements aria hidden. Own function will
+ * set the `aria-hidden` to `"true"`. The return function will remove or
+ * revert the orignal value of the `aria-hidden` which is obviously
+ * `"false"`.
+ * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
+ * */
+function handleElementsAriaHidden(dialogElement: HTMLElement) {
+  // Manually traversing its portal element (direct child of the body.)
+  const portalNode = dialogElement.parentNode?.parentNode?.parentNode
+
+  if (!portalNode) {
+    throw new Error(
+      'Make sure the passed `dialogElement` inside the `Dialog` was defined.'
+    )
+  }
+
+  // Handles all of the direct children of the `body` where
+  // its `aria-hidden` is set to false.
+  const notAriaHiddenElements: [Element, string | null][] = []
+  const children = document.querySelectorAll('body > *')
+  // Use this `Array.prototype.forEach` to support legacy browsers
+  // instead of using `Array.from` or the `children.forEach`.
+  // Read more about this - https://developer.mozilla.org/en-US/docs/Web/API/NodeList.
+  Array.prototype.forEach.call(children, function (element: Element) {
+    // Exclude its portal element.
+    if (portalNode === element) {
+      return
+    }
+
+    const elementAriaHidden = element.getAttribute('aria-hidden')
+    const isElementHidden = elementAriaHidden && elementAriaHidden === 'true'
+    if (isElementHidden) {
+      return
+    }
+
+    element.setAttribute('aria-hidden', 'true')
+    // We need to make sure to retain the original value once the diealog is closed. E.g if the
+    // participated element was intentionally set its `aria-hidden` to `false`, basically we need
+    // to retain this value. Else, if no `aria-hidden`, its a null, then remove the attribute.
+    notAriaHiddenElements.push([element, elementAriaHidden])
+  })
+
+  return () => {
+    notAriaHiddenElements.forEach(([element, originalValue]) => {
+      if (!originalValue) {
+        element.removeAttribute('aria-hidden')
+      } else {
+        element.setAttribute('aria-hidden', originalValue)
+      }
+    })
+  }
 }
 
 export { Dialog as default }
