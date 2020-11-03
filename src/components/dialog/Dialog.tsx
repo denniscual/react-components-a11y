@@ -7,9 +7,6 @@ import Portal from '../portal'
 /**
  * Dialog (Modal)
  *
- * Specs:
- *   - https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_modal
- *
  * Keyboard interactions (https://www.w3.org/TR/wai-aria-practices-1.2/#keyboard-interaction-7):
  * - When a dialog opens, focus moves to an element inside the dialog. About whats element will be the initial
  *   focused, it depends on the case. ✅
@@ -27,6 +24,8 @@ import Portal from '../portal'
  * WAI-ARIA Roles, States, and Properties (https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props)
  * - The element that serves as the dialog container has a role of dialog. ✅
  * - The dialog container element has aria-modal set to true.✅
+ *
+ * @see WAI-aria https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_modal
  *
  * @example
  *

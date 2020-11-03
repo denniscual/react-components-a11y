@@ -15,8 +15,7 @@ import { RootAccordion } from './RootAccordion'
  * Internally the explicit state is handled by the MultiAccordion then create
  * a derived state for the MultiAccordionItem.
  *
- * Specs:
- *   - WAI-ARIA: https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
+ * @see WAI-ARIA https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
  * */
 
 /**

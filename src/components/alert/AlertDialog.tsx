@@ -5,9 +5,6 @@ import Dialog, { DialogProps } from '../dialog'
 /**
  * Alert Dialog
  *
- * Specs:
- *   - https://www.w3.org/TR/wai-aria-practices-1.2/#alertdialog
- *
  * An alert dialog is a modal dialog that interrupts the user's workflow to communicate an
  * important message and acquire a response. Examples include action confirmation prompts and
  * error message confirmations. The alertdialog role enables assistive technologies and browsers to distinguish
@@ -15,6 +12,8 @@ import Dialog, { DialogProps } from '../dialog'
  * such as playing a system alert sound.
  *
  * Check the keyboard interactions and focus management of the `Dialog` Component.
+ *
+ * @see WAI-aria https://www.w3.org/TR/wai-aria-practices-1.2/#alertdialog
  *
  * @example
  *
