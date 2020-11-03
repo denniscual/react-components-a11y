@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useCallback, useRef, useEffect } from 'react'
+import React, { useCallback, useRef, useEffect } from 'react'
 import { forwardRefWithAs, KEYBOARD_KEYS, useForkedRef } from '../../utils'
 import { FocusOn } from 'react-focus-on'
 import styles from './Dialog.module.css'
@@ -48,9 +48,16 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
     const handleLockActivation = useCallback(
       function handleLockActivation() {
         // It will only override the initial focus element if the `disableAutoFocus` is set to `true`.
-        if (disableAutoFocus) {
-          initElementFocusRef?.current?.focus()
+        if (
+          disableAutoFocus &&
+          !initElementFocusRef?.current &&
+          process.env.NODE_ENV === 'development'
+        ) {
+          throw new Error(
+            `The "autoFocus" is disabled but the "initElementFocusRef" is undefined. You need to make sure that your "initElementFocusRef" is defined when disabling "autoFocus".`
+          )
         }
+        initElementFocusRef?.current?.focus()
       },
       [initElementFocusRef, disableAutoFocus]
     )

@@ -33,6 +33,7 @@ function App() {
           onClose={handleCloseDialog}
           aria-labelledby="dialog-title"
           aria-describedby="dialog-desc"
+          disableAutoFocus
         >
           <button onClick={handleCloseDialog}>Close</button>
           <h1 id="dialog-title">Dialog title</h1>
