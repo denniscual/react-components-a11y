@@ -2,11 +2,14 @@ import React, { useCallback, useRef, useEffect } from 'react'
 import { forwardRefWithAs, KEYBOARD_KEYS, useForkedRef } from '../../utils'
 import { FocusOn } from 'react-focus-on'
 import styles from './Dialog.module.css'
-import Portal from '../Portal'
-
-// TODO: Add aria-hidden to true to all inert elements to prevent screen readers read the conent.
+import Portal from '../portal'
 
 /**
+ * Dialog (Modal)
+ *
+ * Specs:
+ *   - https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_modal
+ *
  * Keyboard interactions (https://www.w3.org/TR/wai-aria-practices-1.2/#keyboard-interaction-7):
  * - When a dialog opens, focus moves to an element inside the dialog. About whats element will be the initial
  *   focused, it depends on the case. ✅
@@ -24,12 +27,35 @@ import Portal from '../Portal'
  * WAI-ARIA Roles, States, and Properties (https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props)
  * - The element that serves as the dialog container has a role of dialog. ✅
  * - The dialog container element has aria-modal set to true.✅
+ *
+ * @example
+ *
+ *  <Dialog
+ *    isOpen={isOpen}
+ *    onClose={handleCloseDialog}
+ *    aria-labelledby="dialog-title"
+ *    disableAutoFocus
+ *  >
+ *  <button onClick={handleCloseDialog}>Close</button>
+ *  <h1 id="dialog-title">Add Delivery Address</h1>
+ *  <div>
+ *    <label>
+ *      Street
+ *      <input type="text" />
+ *    </label>
+ *    <label>
+ *      City
+ *      <input type="password" />
+ *    </label>
+ *  </div>
+ *  </AlertDialog>
  * */
 
 const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
   function Dialog(
     {
       as: Comp = 'div',
+      role = 'dialog',
       disableAutoFocus = false,
       initElementFocusRef,
       isOpen,
@@ -151,7 +177,7 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
                * The element that serves as the dialog container has a role of dialog.
                * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
                * */
-              role="dialog"
+              role={role}
               /**
                * The dialog container element has aria-modal set to true.
                * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
@@ -165,7 +191,8 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
   }
 )
 
-interface DialogProps {
+export interface DialogProps {
+  role?: string
   isOpen: boolean
   onClose(): void
   /**

@@ -1,6 +1,6 @@
 import React, { PropsWithChildren } from 'react'
 import { createPortal } from 'react-dom'
-import { useIsomorphicLayoutEffect, useForceUpdate } from '../utils'
+import { useIsomorphicLayoutEffect, useForceUpdate } from '../../utils'
 
 /**
  * Higher level  Component to create  mount children  to an element

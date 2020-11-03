@@ -5,6 +5,9 @@ import { RootAccordion, AccordionType } from './RootAccordion'
 /**
  * Single Accordion
  *
+ * Specs:
+ *   - WAI-ARIA: https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
+ *
  * An accordion is a vertically stacked set of interactive headings that each contain a
  * title, content snippet, or thumbnail representing a section of content. The headings
  * function as controls that enable users to reveal or hide their associated sections of content.
@@ -15,9 +18,6 @@ import { RootAccordion, AccordionType } from './RootAccordion'
  * As default, SingleAccordion will always shows 1 panel a time. But this can be change
  * by passing a `type` value `collapsible`. In this behaviour, the Accordion can show atleast 0 or 1 panel and also
  * the active panel can collapse itself.
- *
- * Specs:
- *   - WAI-ARIA: https://www.w3.org/TR/wai-aria-practices-1.2/#accordion
  * */
 
 /**

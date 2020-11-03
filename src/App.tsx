@@ -13,21 +13,6 @@ function App() {
     <div className={styles.Container}>
       <div className={styles.Content}>
         <button onClick={() => setIsOpen(true)}>Open dialog</button>
-        <p>
-          Quae, perferendis do ornare, dicta interdum, neque, excepteur! Eos
-          quasi! Tempor primis quis quaerat! Aperiam rerum aperiam. Convallis
-          eleifend, adipisci, duis habitant enim dolore. Id pharetra! Proin
-          officiis, corrupti cubilia perspiciatis venenatis. Laboris felis
-          suspendisse urna? Pharetra deleniti, duis voluptas vulputate lorem
-          veniam? Fugiat assumenda, illo expedita rutrum! Justo aperiam
-          temporibus ligula, vero magnis delectus massa? Velit rerum quod
-          distinctio, urna penatibus qui? Numquam, facilisis! Assumenda?
-          Adipiscing varius voluptatibus conubia maecenas semper, taciti
-          necessitatibus at, vitae nascetur, nascetur arcu. Exercitationem,
-          consectetuer? Perspiciatis aliquid libero ut facere facere parturient!
-          Ullamcorper rutrum, porttitor officia nulla sunt ipsam primis! Minus
-          ipsa delectus officia.
-        </p>
         <Dialog
           isOpen={isOpen}
           onClose={handleCloseDialog}
