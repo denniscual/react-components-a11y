@@ -49,7 +49,6 @@ import Portal from '../portal'
  *  </div>
  *  </AlertDialog>
  * */
-
 const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
   function Dialog(
     {
