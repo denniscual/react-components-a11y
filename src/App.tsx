@@ -13,12 +13,23 @@ export default function App() {
   const [values, setValues] = useState({
     react: true,
     vue: false,
-    svelte: 'mixed',
+    svelte: false,
   } as CheckboxCollection)
 
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
+        <button
+          onClick={() =>
+            setValues({
+              react: true,
+              vue: false,
+              svelte: 'mixed',
+            })
+          }
+        >
+          Update values
+        </button>
         <CheckboxGroup
           value={values}
           onChange={(values) => {
@@ -46,7 +57,6 @@ export default function App() {
   )
 }
 
-// TODO: Make this polymorphic element.
 function CheckboxGroup({
   value,
   onChange,
@@ -78,9 +88,8 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
 ) {
   const groupItemsCtx = useGroupItemsCtx<boolean | 'mixed'>()
   const groupItemsCtxRef = useRef<typeof groupItemsCtx>(groupItemsCtx)
-
-  const ownRef = React.useRef<HTMLInputElement | null>(null)
   const itemChecked = groupItemsCtx?.items[value] ?? checked
+  const ownRef = React.useRef<HTMLInputElement | null>(null)
 
   useIsomorphicLayoutEffect(
     function registerCheckbox() {
@@ -97,7 +106,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   )
 
   useIsomorphicLayoutEffect(() => {
-    if (!groupItemsCtxRef.current && ownRef.current) {
+    if (ownRef.current) {
       ownRef.current.indeterminate = itemChecked === 'mixed'
     }
   }, [itemChecked])
@@ -111,8 +120,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
           }
         }
 
-  const inputChecked =
-    typeof itemChecked === 'boolean' ? itemChecked : undefined
+  const inputChecked = typeof itemChecked === 'boolean' && itemChecked
   const ref = useForkedRef(ownRef, forwardRef)
 
   return (
