@@ -1,9 +1,7 @@
 import React, {
   createContext,
   forwardRef,
-  useCallback,
   useContext,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -15,8 +13,9 @@ export default function App() {
   const [values, setValues] = useState({
     react: true,
     vue: false,
-    svelte: false,
+    svelte: 'mixed',
   } as CheckboxCollection)
+
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
@@ -32,7 +31,6 @@ export default function App() {
               <Checkbox type="checkbox" value="react" id="ui-react" />
               <label htmlFor="ui-react">ReactJS</label>
             </div>
-            <input type="text" value="asdf" />
             <div>
               <Checkbox type="checkbox" value="vue" id="ui-vue" />
               <label htmlFor="ui-vue">Vue</label>
@@ -55,28 +53,7 @@ function CheckboxGroup({
   ...otherProps
 }: React.PropsWithChildren<CheckboxGroupProps>) {
   return (
-    <div
-      /**
-       * TODO: We need to make sure the `onChange` is from the nearest checkbox not on the nested checkbox or different
-       * input element like input text.
-       *
-       * We delegate the handling of the `onChange` event to this parent
-       * element so that we can centralise the logic of updating the `value` state.
-       * https://javascript.info/event-delegation
-       *
-       * */
-      onChange={(event) => {
-        const { target } = event
-        onChange({
-          ...value,
-          // @ts-expect-error We expect the error here because the event we are expecting is
-          // from input element not from div.
-          [target.value]: target.checked, // update here the value of the items,
-        })
-      }}
-    >
-      <GroupItemsProvider items={value} setItems={onChange} {...otherProps} />
-    </div>
+    <GroupItemsProvider items={value} setItems={onChange} {...otherProps} />
   )
 }
 
@@ -96,7 +73,7 @@ type CheckboxCollection = {
  * @see https://www.w3.org/TR/wai-aria-practices-1.2/examples/checkbox/checkbox-2/checkbox-2.html
  * */
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
-  { checked, value, onChange = noop, ...otherProps },
+  { checked, value, onChange, ...otherProps },
   forwardRef
 ) {
   const groupItemsCtx = useGroupItemsCtx<boolean | 'mixed'>()
@@ -108,9 +85,9 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   useIsomorphicLayoutEffect(
     function registerCheckbox() {
       if (groupItemsCtxRef.current && ownRef.current) {
-        const { items, registerItem, removeItem } = groupItemsCtxRef.current
+        const { items, setItem, removeItem } = groupItemsCtxRef.current
         const _itemChecked = items[value]
-        registerItem(value, _itemChecked)
+        setItem(value, _itemChecked)
         ownRef.current.indeterminate = _itemChecked === 'mixed'
 
         return () => removeItem(value)
@@ -125,6 +102,15 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
     }
   }, [itemChecked])
 
+  const handleOnChange =
+    onChange && groupItemsCtx
+      ? onChange
+      : (event: React.ChangeEvent<HTMLInputElement>) => {
+          if (groupItemsCtx) {
+            groupItemsCtx.setItem(value, event.currentTarget.checked)
+          }
+        }
+
   const inputChecked =
     typeof itemChecked === 'boolean' ? itemChecked : undefined
   const ref = useForkedRef(ownRef, forwardRef)
@@ -137,7 +123,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
       ref={ref}
       type="checkbox"
       checked={inputChecked}
-      onChange={onChange}
+      onChange={handleOnChange}
     />
   )
 })
@@ -162,7 +148,7 @@ function GroupItemsProvider({
   setItems: (items: Record<string, any>) => void
 }>) {
   const ctxValue = useMemo(() => {
-    function registerItem(key: string, value: any) {
+    function setItem(key: string, value: any) {
       setItems({
         ...items,
         [key]: value,
@@ -178,7 +164,7 @@ function GroupItemsProvider({
 
     return {
       items,
-      registerItem,
+      setItem,
       removeItem,
     }
   }, [items, setItems])
@@ -191,7 +177,7 @@ GroupItemsContext.displayName = 'GroupItemsContext'
 
 interface GroupItemsProps<T = any> {
   items: Record<string, T>
-  registerItem(key: string, value: T): void
+  setItem(key: string, value: T): void
   removeItem(key: string): void
 }
 
