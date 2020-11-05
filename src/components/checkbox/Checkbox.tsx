@@ -1,11 +1,6 @@
-import React, {
-  forwardRef,
-  useRef,
-  useMemo,
-  useContext,
-  createContext,
-} from 'react'
+import React, { forwardRef, useRef } from 'react'
 import { useForkedRef, useIsomorphicLayoutEffect } from '../../utils'
+import { GroupItemsProvider, useGroupItemsContext } from '../GroupItemsContext'
 
 /**
  * Group the checkboxes and handle the checkboxes state based on the `value` and `onChange` props of this Component.
@@ -45,7 +40,7 @@ import { useForkedRef, useIsomorphicLayoutEffect } from '../../utils'
  *    )
  *  }
  * */
-function CheckboxGroup<T extends { [key: string]: boolean | 'mixed' }>({
+function CheckboxGroup<T extends CheckboxCollection>({
   value,
   onChange,
   ...otherProps
@@ -55,12 +50,12 @@ function CheckboxGroup<T extends { [key: string]: boolean | 'mixed' }>({
   )
 }
 
-interface CheckboxGroupProps<T = any> {
-  value: CheckboxCollection<T>
-  onChange(value: CheckboxCollection<T>): void
+interface CheckboxGroupProps<T extends CheckboxCollection> {
+  value: T
+  onChange(value: T): void
 }
 
-export type CheckboxCollection<T = any> = T
+type CheckboxCollection = { [key: string]: boolean | 'mixed' }
 
 /**
  * Checkbox
@@ -81,7 +76,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   { checked, value, onChange, ...otherProps },
   forwardRef
 ) {
-  const groupItemsCtx = useGroupItemsCtx<boolean | 'mixed'>()
+  const groupItemsCtx = useGroupItemsContext<boolean | 'mixed'>()
   const groupItemsCtxRef = useRef<typeof groupItemsCtx>(groupItemsCtx)
   const itemChecked = groupItemsCtx?.items[value] ?? checked
   const ownRef = React.useRef<HTMLInputElement | null>(null)
@@ -141,57 +136,6 @@ interface CheckboxProps
   extends Omit<React.ComponentPropsWithRef<'input'>, 'checked' | 'value'> {
   checked?: boolean | 'mixed'
   value: string
-}
-
-function GroupItemsProvider<T extends { [key: string]: any }>({
-  items,
-  setItems,
-  ...otherProps
-}: React.PropsWithChildren<GroupItemsProviderProps<T>>) {
-  const ctxValue = useMemo(() => {
-    function setItem(key: string, value: any) {
-      setItems({
-        ...items,
-        [key]: value,
-      })
-    }
-
-    function removeItem(key: string) {
-      delete items[key]
-      setItems({
-        ...items,
-      })
-    }
-
-    return {
-      items,
-      setItem,
-      removeItem,
-    }
-  }, [items, setItems])
-
-  return <GroupItemsContext.Provider {...otherProps} value={ctxValue} />
-}
-
-interface GroupItemsProviderProps<T extends { [key: string]: any }> {
-  items: T
-  setItems(value: T): void
-}
-
-function useGroupItemsCtx<T>() {
-  const ctx = useContext(GroupItemsContext)
-  return ctx as GroupItemsProps<T> | null
-}
-
-const GroupItemsContext = createContext<GroupItemsProps | null>(null)
-GroupItemsContext.displayName = 'GroupItemsContext'
-
-interface GroupItemsProps<T = any> {
-  items: {
-    [key: string]: T
-  }
-  setItem(key: string, value: T): void
-  removeItem(key: string): void
 }
 
 export { Checkbox, CheckboxGroup }

@@ -16,7 +16,7 @@ export default function createDescendantsManager(name: string) {
       HTMLElement[]
     >([])
 
-    const registrar = React.useMemo(
+    const ctxValue = React.useMemo(
       () => ({
         registerElement(element: HTMLElement) {
           setRegisteredElements((prevRegisteredElements) => {
@@ -136,7 +136,7 @@ export default function createDescendantsManager(name: string) {
     )
 
     return (
-      <DescendantsContext.Provider value={registrar}>
+      <DescendantsContext.Provider value={ctxValue}>
         {children}
       </DescendantsContext.Provider>
     )
