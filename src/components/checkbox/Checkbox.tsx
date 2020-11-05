@@ -12,7 +12,6 @@ import { useForkedRef, useIsomorphicLayoutEffect } from '../../utils'
  *
  * @example
  *
- *
  * export default function App() {
  *   const [values, setValues] = useState({
  *     react: true,
@@ -46,28 +45,25 @@ import { useForkedRef, useIsomorphicLayoutEffect } from '../../utils'
  *    )
  *  }
  * */
-function CheckboxGroup({
+function CheckboxGroup<T extends { [key: string]: boolean | 'mixed' }>({
   value,
   onChange,
   ...otherProps
-}: React.PropsWithChildren<CheckboxGroupProps>) {
+}: React.PropsWithChildren<CheckboxGroupProps<T>>) {
   return (
     <GroupItemsProvider items={value} setItems={onChange} {...otherProps} />
   )
 }
 
-interface CheckboxGroupProps {
-  value: CheckboxCollection
-  onChange(value: CheckboxCollection): void
+interface CheckboxGroupProps<T = any> {
+  value: CheckboxCollection<T>
+  onChange(value: CheckboxCollection<T>): void
 }
 
-export type CheckboxCollection = {
-  [key: string]: boolean | 'mixed'
-}
+export type CheckboxCollection<T = any> = T
 
 /**
- * TODO:
- * - Better types inference for the Checkbox group items.
+ * Checkbox
  *
  * This type of checkbox supports an additional third state known as partially checked.
  * One common use of a tri-state checkbox can be found in software installers where a single
@@ -147,19 +143,11 @@ interface CheckboxProps
   value: string
 }
 
-function useGroupItemsCtx<T>() {
-  const ctx = useContext(GroupItemsContext)
-  return ctx as GroupItemsProps<T> | null
-}
-
-function GroupItemsProvider({
+function GroupItemsProvider<T extends { [key: string]: any }>({
   items,
   setItems,
   ...otherProps
-}: React.PropsWithChildren<{
-  items: Record<string, any>
-  setItems: (items: Record<string, any>) => void
-}>) {
+}: React.PropsWithChildren<GroupItemsProviderProps<T>>) {
   const ctxValue = useMemo(() => {
     function setItem(key: string, value: any) {
       setItems({
@@ -185,11 +173,23 @@ function GroupItemsProvider({
   return <GroupItemsContext.Provider {...otherProps} value={ctxValue} />
 }
 
+interface GroupItemsProviderProps<T extends { [key: string]: any }> {
+  items: T
+  setItems(value: T): void
+}
+
+function useGroupItemsCtx<T>() {
+  const ctx = useContext(GroupItemsContext)
+  return ctx as GroupItemsProps<T> | null
+}
+
 const GroupItemsContext = createContext<GroupItemsProps | null>(null)
 GroupItemsContext.displayName = 'GroupItemsContext'
 
 interface GroupItemsProps<T = any> {
-  items: Record<string, T>
+  items: {
+    [key: string]: T
+  }
   setItem(key: string, value: T): void
   removeItem(key: string): void
 }

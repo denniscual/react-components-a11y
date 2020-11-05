@@ -1,32 +1,17 @@
 import React, { useState } from 'react'
 import styles from './App.module.css'
-import {
-  CheckboxGroup,
-  Checkbox,
-  CheckboxCollection,
-} from './components/checkbox'
+import { CheckboxGroup, Checkbox } from './components/checkbox'
 
 export default function App() {
   const [values, setValues] = useState({
     react: true,
     vue: false,
-    svelte: false,
-  } as CheckboxCollection)
+    svelte: 'mixed',
+  } as const)
 
   return (
     <div className={styles.Container}>
       <div className={styles.Content}>
-        <button
-          onClick={() =>
-            setValues({
-              react: true,
-              vue: false,
-              svelte: 'mixed',
-            })
-          }
-        >
-          Update values
-        </button>
         <CheckboxGroup
           value={values}
           onChange={(values) => {
