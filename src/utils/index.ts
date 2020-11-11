@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { MutableRefObject } from 'react'
 import forwardRefWithAs from './forwardRefWithAs'
 
 /**
@@ -55,7 +55,7 @@ function useLazyRef<T>(cb: () => T) {
   if (!lazyRef.current) {
     lazyRef.current = cb()
   }
-  return lazyRef.current
+  return lazyRef as MutableRefObject<T>
 }
 
 function classNames(...classNames: string[]) {

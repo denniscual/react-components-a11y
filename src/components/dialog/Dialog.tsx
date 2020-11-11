@@ -130,62 +130,64 @@ const Dialog = forwardRefWithAs<HTMLDivElement, DialogProps, 'div'>(
       }
     }, [])
 
-    return isOpen ? (
+    return (
       <Portal>
-        {/**
-         * Windows under a modal dialog are inert. That is, users cannot interact with content outside
-         * an active dialog window. Inert content outside an active dialog is typically visually obscured
-         * or dimmed so it is difficult to discern, and in some implementations, attempts to
-         * interact with the inert content cause the dialog to close.
-         *
-         * Like non-modal dialogs, modal dialogs contain their tab sequence. That is, Tab and Shift + Tab
-         * do not move focus outside the dialog. However, unlike most non-modal dialogs,
-         * modal dialogs do not provide means for moving keyboard focus outside the dialog window without closing
-         * the dialog.
-         *
-         * With this, we use a React library to handle the focus lock and body scroll lock.
-         * https://github.com/theKashey/react-focus-on
-         *
-         * */}
-        <FocusOn
-          // In all circumstances, focus moves to an element contained in the dialog.
-          autoFocus={!disableAutoFocus}
+        {isOpen && (
           /**
-           * This will return the focus to the element who open the dialog like `button`.
+           * Windows under a modal dialog are inert. That is, users cannot interact with content outside
+           * an active dialog window. Inert content outside an active dialog is typically visually obscured
+           * or dimmed so it is difficult to discern, and in some implementations, attempts to
+           * interact with the inert content cause the dialog to close.
+           *
+           * Like non-modal dialogs, modal dialogs contain their tab sequence. That is, Tab and Shift + Tab
+           * do not move focus outside the dialog. However, unlike most non-modal dialogs,
+           * modal dialogs do not provide means for moving keyboard focus outside the dialog window without closing
+           * the dialog.
+           *
+           * With this, we use a React library to handle the focus lock and body scroll lock.
+           * https://github.com/theKashey/react-focus-on
+           *
            * */
-          returnFocus
-          onActivation={handleLockActivation}
-        >
-          <div
-            ref={dialogOverlayRef}
+          <FocusOn
+            // In all circumstances, focus moves to an element contained in the dialog.
+            autoFocus={!disableAutoFocus}
             /**
-             * Don't worry, this `div` element can't accept focus. We add this element
-             * inside the `FocusOn` to be able we can close the dialog when clicking to itself and achieve the styles we want.
+             * This will return the focus to the element who open the dialog like `button`.
              * */
-            onClick={handleClick}
-            onMouseDown={handleMouseDown}
-            className={styles.DialogOverlay}
-            onKeyDown={handleKeyDown}
+            returnFocus
+            onActivation={handleLockActivation}
           >
-            <Comp
-              {...otherProps}
-              ref={ref}
-              className={styles.DialogContainer}
+            <div
+              ref={dialogOverlayRef}
               /**
-               * The element that serves as the dialog container has a role of dialog.
-               * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
+               * Don't worry, this `div` element can't accept focus. We add this element
+               * inside the `FocusOn` to be able we can close the dialog when clicking to itself and achieve the styles we want.
                * */
-              role={role}
-              /**
-               * The dialog container element has aria-modal set to true.
-               * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
-               * */
-              aria-modal={true}
-            />
-          </div>
-        </FocusOn>
+              onClick={handleClick}
+              onMouseDown={handleMouseDown}
+              className={styles.DialogOverlay}
+              onKeyDown={handleKeyDown}
+            >
+              <Comp
+                {...otherProps}
+                ref={ref}
+                className={styles.DialogContainer}
+                /**
+                 * The element that serves as the dialog container has a role of dialog.
+                 * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
+                 * */
+                role={role}
+                /**
+                 * The dialog container element has aria-modal set to true.
+                 * https://www.w3.org/TR/wai-aria-practices-1.2/#dialog_roles_states_props
+                 * */
+                aria-modal={true}
+              />
+            </div>
+          </FocusOn>
+        )}
       </Portal>
-    ) : null
+    )
   }
 )
 
