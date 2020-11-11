@@ -1,8 +1,8 @@
-import React, { RefObject, useEffect, useRef, useState } from 'react'
+import React, { RefObject, useRef, useState } from 'react'
 import {
   forwardRefWithAs,
-  useIsomorphicLayoutEffect,
   useForkedRef,
+  useIsomorphicLayoutEffect,
 } from '../../utils'
 import Portal from '../portal'
 
@@ -43,48 +43,13 @@ const Popover = forwardRefWithAs<
   { as: Comp = 'div', domRect, targetRef, ...otherProps },
   forwardRef
 ) {
-  const [elementDOMRect, setElementDOMRect] = useState({
-    width: 0,
-    height: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  })
-
+  const [ownPosition, setOwnPosition] = useState(() => new DOMRect())
   const ownRef = useRef<HTMLDivElement | null>(null)
-  const ref = useForkedRef(ownRef, forwardRef)
+  const ref = useForkedRef(forwardRef, ownRef)
 
   useIsomorphicLayoutEffect(() => {
-    if (!domRect && targetRef.current) {
-      const domRect = targetRef.current.getBoundingClientRect()
-      setElementDOMRect(domRect)
-    }
-  }, [domRect, targetRef])
-
-  useEffect(() => {
-    if (targetRef.current && ownRef.current) {
-      // Create an observer instance linked to the callback function
-      const observer = new MutationObserver(function mutationObserver(
-        mutationsList
-      ) {
-        // Use traditional 'for loops' for IE 11
-        for (const mutation of mutationsList) {
-          console.log(mutation.oldValue)
-          console.log(
-            'The ' + mutation.attributeName + ' attribute was modified.'
-          )
-        }
-      })
-      // Start observing the target node for configured mutations
-      observer.observe(targetRef.current, {
-        attributes: true,
-        attributeOldValue: true,
-      })
-      return () => {
-        // Later, you can stop observing
-        observer.disconnect()
-      }
+    if (targetRef.current) {
+      setOwnPosition(targetRef.current.getBoundingClientRect())
     }
   }, [targetRef])
 
@@ -95,8 +60,8 @@ const Popover = forwardRefWithAs<
         ref={ref}
         style={{
           position: 'absolute',
-          left: elementDOMRect.left,
-          top: elementDOMRect.bottom,
+          left: ownPosition.left,
+          top: ownPosition.bottom,
         }}
         {...otherProps}
       />

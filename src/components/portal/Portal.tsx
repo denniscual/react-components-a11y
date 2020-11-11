@@ -21,8 +21,6 @@ export default function Portal({
     const portalEl = portalRef.current
     // append the parent root to the body
     document.body.appendChild(portalEl)
-    // force update to render the portal.
-    forceUpdate()
 
     return () => {
       // when the Component is unmounted, remove the attached element.
