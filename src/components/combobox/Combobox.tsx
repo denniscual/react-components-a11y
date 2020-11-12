@@ -11,6 +11,8 @@ import Portal from '../portal'
  *  associated pop-up element for helping users set the value of the textbox. The popup may be a listbox, grid,
  *  tree, or dialog.
  *
+ *  Note that the role, state, and property guidance is based on ARIA 1.1
+ *
  *  @see https://www.w3.org/TR/wai-aria-practices-1.1/#combobox
  * */
 const Combobox = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Combobox({
@@ -19,7 +21,29 @@ const Combobox = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Combobox({
 }) {
   const comboboxRef = useRef<HTMLDivElement | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  return <Comp role="combobox" ref={comboboxRef} {...otherProps} />
+  return (
+    <Comp
+      role="combobox"
+      ref={comboboxRef}
+      /**
+       * When the combobox popup is not visible, the element with role combobox has aria-expanded set to false.
+       * When the popup element is visible, aria-expanded is set to true. Note that elements with role combobox
+       * have a default value for aria-expanded of false.
+       * */
+      aria-expanded={false}
+      /**
+       * When a descendant of a listbox, grid, or tree popup is focused, DOM focus remains on the textbox and the
+       * textbox has aria-activedescendant set to a value that refers to the focused element within the popup.
+       * */
+      aria-activedescendant="option-1"
+      /**
+       * Specify what kind of autocomplete does the combobox do.
+       * Soon, what we want is the "both" value. But for now just "none".
+       * */
+      aria-autocomplete="none"
+      {...otherProps}
+    />
+  )
 })
 
 /**
@@ -35,7 +59,19 @@ const Combobox = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Combobox({
  * */
 const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
   function ComboboxInput({ as: Comp = 'input', ...otherProps }) {
-    return <Comp type="text" {...otherProps} />
+    return (
+      <Comp
+        /**
+         *  TODO: This aria-controls must be included on the textbox if the listbox is displayed.
+         *
+         * When the combobox popup is visible, the textbox element has aria-controls set to a value
+         * that refers to the combobox popup element.
+         * */
+        aria-controls="combobox-list"
+        type="text"
+        {...otherProps}
+      />
+    )
   }
 )
 
@@ -52,6 +88,7 @@ const ComboboxList = forwardRefWithAs<HTMLUListElement, {}, 'ul'>(
   function ComboboxList({ as: Comp = 'ul', ...otherProps }) {
     return (
       <Comp
+        id="combobox-list"
         /**
          * An element that contains or owns all the listbox options has role listbox.
          * */
@@ -70,11 +107,12 @@ const ComboboxList = forwardRefWithAs<HTMLUListElement, {}, 'ul'>(
 const ComboboxOption = forwardRefWithAs<HTMLLIElement, {}, 'li'>(
   function ComboboxOption({ as: Comp = 'li', ...otherProps }) {
     return (
-      <li
+      <Comp
         /**
          * Each option in the listbox has role option and is a DOM descendant of the element with role listbox
          * */
         role="option"
+        aria-selected={false}
         {...otherProps}
       />
     )
