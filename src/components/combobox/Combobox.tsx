@@ -1,8 +1,20 @@
-import React, { RefObject, useRef, useState } from 'react'
+import React, {
+  createContext,
+  Dispatch,
+  MutableRefObject,
+  RefObject,
+  SetStateAction,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   forwardRefWithAs,
+  KEYBOARD_KEYS,
   useForkedRef,
   useIsomorphicLayoutEffect,
+  wrapEventHandler,
 } from '../../utils'
 import Portal from '../portal'
 
@@ -20,31 +32,50 @@ const Combobox = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Combobox({
   ...otherProps
 }) {
   const comboboxRef = useRef<HTMLDivElement | null>(null)
-  const [isOpen, setIsOpen] = useState(false)
+  const [isPopupOpen, setIsPopupOpen] = useState(false)
+
+  const comboboxInputRef = useRef<HTMLInputElement | null>(null)
+  const ctxValue = useMemo(
+    () => ({
+      isPopupOpenState: [isPopupOpen, setIsPopupOpen] as IsPopupOpenState,
+      comboboxInputRef,
+    }),
+    [comboboxInputRef, isPopupOpen]
+  )
   return (
-    <Comp
-      role="combobox"
-      ref={comboboxRef}
-      /**
-       * When the combobox popup is not visible, the element with role combobox has aria-expanded set to false.
-       * When the popup element is visible, aria-expanded is set to true. Note that elements with role combobox
-       * have a default value for aria-expanded of false.
-       * */
-      aria-expanded={false}
-      /**
-       * When a descendant of a listbox, grid, or tree popup is focused, DOM focus remains on the textbox and the
-       * textbox has aria-activedescendant set to a value that refers to the focused element within the popup.
-       * */
-      aria-activedescendant="option-1"
-      /**
-       * Specify what kind of autocomplete does the combobox do.
-       * Soon, what we want is the "both" value. But for now just "none".
-       * */
-      aria-autocomplete="none"
-      {...otherProps}
-    />
+    <ComboboxContext.Provider value={ctxValue}>
+      <Comp
+        role="combobox"
+        ref={comboboxRef}
+        /**
+         * When the combobox popup is not visible, the element with role combobox has aria-expanded set to false.
+         * When the popup element is visible, aria-expanded is set to true. Note that elements with role combobox
+         * have a default value for aria-expanded of false.
+         * */
+        aria-expanded={isPopupOpen}
+        /**
+         * Specify what kind of autocomplete does the combobox do.
+         * Soon, what we want is the "both" value. But for now just "none".
+         * */
+        aria-autocomplete="none"
+        {...otherProps}
+      />
+    </ComboboxContext.Provider>
   )
 })
+
+const ComboboxContext = createContext<{
+  isPopupOpenState: IsPopupOpenState
+  comboboxInputRef: MutableRefObject<HTMLInputElement | null>
+}>({
+  isPopupOpenState: [false, () => {}],
+  comboboxInputRef: { current: null },
+})
+
+type IsPopupOpenState = [
+  isPopupOpen: boolean,
+  setIsPopupOpen: Dispatch<SetStateAction<boolean>>
+]
 
 /**
  *
@@ -55,12 +86,48 @@ const Combobox = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Combobox({
  *   2. List autocomplete with manual selection
  *   3. List autocomplete with automatic selection
  *   4. List with inline autocomplete
- *
  * */
 const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
-  function ComboboxInput({ as: Comp = 'input', ...otherProps }) {
+  function ComboboxInput(
+    { as: Comp = 'input', onKeyDown, onFocus, onBlur, ...otherProps },
+    forwardRef
+  ) {
+    const {
+      isPopupOpenState: [, setIsPopupOpen],
+      comboboxInputRef,
+    } = useContext(ComboboxContext)
+
+    const ref = useForkedRef(comboboxInputRef, forwardRef)
+
+    const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
+      event
+    ) => {
+      if (event.key === KEYBOARD_KEYS.ARROW_DOWN) {
+        setIsPopupOpen(true)
+      }
+    }
+
+    function handleFocus() {
+      setIsPopupOpen(true)
+    }
+
+    function handleBlur() {
+      /* setIsPopupOpen(false) */
+    }
+
     return (
       <Comp
+        ref={ref}
+        /**
+         * It is displayed when the Down Arrow key is pressed or the show button is activated,
+         * possibly with a dependency on the content of the textbox.
+         * */
+        onKeyDown={wrapEventHandler(onKeyDown, handleKeyDown)}
+        /**
+         * If the element receives focus, we shows the popup list.
+         * */
+        onFocus={wrapEventHandler(onFocus, handleFocus)}
+        onBlur={wrapEventHandler(onBlur, handleBlur)}
         /**
          *  TODO: This aria-controls must be included on the textbox if the listbox is displayed.
          *
@@ -68,6 +135,11 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
          * that refers to the combobox popup element.
          * */
         aria-controls="combobox-list"
+        /**
+         * When a descendant of a listbox, grid, or tree popup is focused, DOM focus remains on the textbox and the
+         * textbox has aria-activedescendant set to a value that refers to the focused element within the popup.
+         * */
+        aria-activedescendant="option-1"
         type="text"
         {...otherProps}
       />
@@ -85,21 +157,30 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
  *   - It is displayed if the value of the textbox is altered in a way that creates one or more partial matches to a suggested value.
  * */
 const ComboboxList = forwardRefWithAs<HTMLUListElement, {}, 'ul'>(
-  function ComboboxList({ as: Comp = 'ul', ...otherProps }) {
+  function ComboboxList({ as: Comp = 'ul', ...otherProps }, forwardRef) {
+    const {
+      isPopupOpenState: [isPopupOpen, setIsPopupOpen],
+      comboboxInputRef,
+    } = useContext(ComboboxContext)
     return (
-      <Comp
-        id="combobox-list"
-        /**
-         * An element that contains or owns all the listbox options has role listbox.
-         * */
-        role="listbox"
-        /**
-         * Each option in the listbox has role option and is a DOM descendant of the element with role listbox
-         * or is referenced by an aria-owns property on the listbox element.
-         * */
-        aria-owns=""
-        {...otherProps}
-      />
+      <Popover targetRef={comboboxInputRef}>
+        {isPopupOpen && (
+          <Comp
+            id="combobox-list"
+            /**
+             * An element that contains or owns all the listbox options has role listbox.
+             * */
+            role="listbox"
+            /**
+             * Each option in the listbox has role option and is a DOM descendant of the element with role listbox
+             * or is referenced by an aria-owns property on the listbox element.
+             * */
+            aria-owns=""
+            aria-hidden={true}
+            {...otherProps}
+          ></Comp>
+        )}
+      </Popover>
     )
   }
 )
@@ -155,4 +236,4 @@ const Popover = forwardRefWithAs<
   )
 })
 
-export { Combobox as default, ComboboxInput, ComboboxList, ComboboxOption }
+export { Combobox, ComboboxInput, ComboboxList, ComboboxOption }

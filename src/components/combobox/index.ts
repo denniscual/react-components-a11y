@@ -1,4 +1,5 @@
 import Sample from './Sample'
-import Combobox from './Combobox'
 
-export { Sample, Combobox }
+export * from './Combobox'
+
+export { Sample }
