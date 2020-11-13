@@ -77,6 +77,13 @@ export default function createDescendantsManager(name: string) {
             return newElements
           })
         },
+        findElementByIdx(idx: number) {
+          const element = registeredElements[idx]
+          if (!element) {
+            return null
+          }
+          return element
+        },
         findElementIdx(element: HTMLElement | null) {
           if (!element) {
             return -1
@@ -228,6 +235,7 @@ export default function createDescendantsManager(name: string) {
 export type DescendantsProps = {
   registerElement(element: HTMLElement): void
   findElementIdx(element: HTMLElement | null): number
+  findElementByIdx(idx: number): HTMLElement | null
   getPrevElement(element: HTMLElement): HTMLElement | null
   getNextElement(element: HTMLElement): HTMLElement | null
   getHead(): HTMLElement | null

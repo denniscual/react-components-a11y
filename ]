@@ -23,9 +23,6 @@ import createDescendantsManager, {
 } from '../CustomDescendantsManager'
 import Portal from '../portal'
 
-// TODO: Review the specs
-// TODO: Add the missing states, roles, keyboard support.
-
 const {
   useDescendantsState,
   DescendantsProvider,
@@ -58,66 +55,51 @@ type ComboOptionType = DescendantType<ComboOptionOtherType>
  *
  *  @see https://www.w3.org/TR/wai-aria-practices-1.1/#combobox
  * */
-const Combobox = forwardRefWithAs<HTMLDivElement, ComboboxProps, 'div'>(
-  function Combobox({
-    as: Comp = 'div',
-    id = 'Combobox',
-    onSelect,
-    ...otherProps
-  }) {
-    const comboboxRef = useRef<HTMLDivElement | null>(null)
-    const [isPopupOpen, setIsPopupOpen] = useState(false)
+const Combobox = forwardRefWithAs<HTMLDivElement, {}, 'div'>(function Combobox({
+  as: Comp = 'div',
+  id = 'Combobox',
+  ...otherProps
+}) {
+  const comboboxRef = useRef<HTMLDivElement | null>(null)
+  const [isPopupOpen, setIsPopupOpen] = useState(false)
 
-    const comboboxInputRef = useRef<HTMLInputElement | null>(null)
-    const comboboxListRef = useRef<HTMLUListElement | null>(null)
+  const comboboxInputRef = useRef<HTMLInputElement | null>(null)
+  const ctxValue = useMemo(
+    () => ({
+      isPopupOpenState: [isPopupOpen, setIsPopupOpen] as IsPopupOpenState,
+      comboboxInputRef,
+      id,
+    }),
+    [comboboxInputRef, isPopupOpen, id]
+  )
 
-    const ctxValue = useMemo(
-      () => ({
-        isPopupOpenState: [isPopupOpen, setIsPopupOpen] as IsPopupOpenState,
-        comboboxInputRef,
-        comboboxListRef,
-        id,
-        onSelect,
-      }),
-      [comboboxInputRef, isPopupOpen, id, onSelect]
-    )
-
-    return (
-      <DescendantsProvider>
-        <ComboboxContext.Provider value={ctxValue}>
-          <Comp
-            ref={comboboxRef}
-            role="combobox"
-            /**
-             * When the combobox popup is not visible, the element with role combobox has aria-expanded set to false.
-             * When the popup element is visible, aria-expanded is set to true. Note that elements with role combobox
-             * have a default value for aria-expanded of false.
-             * */
-            aria-expanded={isPopupOpen}
-            {...otherProps}
-          />
-        </ComboboxContext.Provider>
-      </DescendantsProvider>
-    )
-  }
-)
-
-interface ComboboxProps {
-  onSelect(value: string): void
-}
+  return (
+    <DescendantsProvider>
+      <ComboboxContext.Provider value={ctxValue}>
+        <Comp
+          ref={comboboxRef}
+          role="combobox"
+          /**
+           * When the combobox popup is not visible, the element with role combobox has aria-expanded set to false.
+           * When the popup element is visible, aria-expanded is set to true. Note that elements with role combobox
+           * have a default value for aria-expanded of false.
+           * */
+          aria-expanded={isPopupOpen}
+          {...otherProps}
+        />
+      </ComboboxContext.Provider>
+    </DescendantsProvider>
+  )
+})
 
 const ComboboxContext = createContext<{
   isPopupOpenState: IsPopupOpenState
   comboboxInputRef: MutableRefObject<HTMLInputElement | null>
-  comboboxListRef: MutableRefObject<HTMLUListElement | null>
   id: string
-  onSelect(value: string): void
 }>({
   id: 'Combobox',
   isPopupOpenState: [false, () => {}],
   comboboxInputRef: { current: null },
-  comboboxListRef: { current: null },
-  onSelect: () => {},
 })
 
 type IsPopupOpenState = [
@@ -149,9 +131,8 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
     forwardRef
   ) {
     const {
-      isPopupOpenState: [isPopupOpen, setIsPopupOpen],
+      isPopupOpenState: [, setIsPopupOpen],
       comboboxInputRef,
-      onSelect,
     } = useContext(ComboboxContext)
 
     const {
@@ -161,21 +142,15 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
       getNextOption,
       getHead,
       getTail,
-      hasComboOptions,
-      resetOptions,
+      handleChangeValue,
     } = useComboOptionDescendants()
     const selectedOption = getSelectedOption()
+    const trimmedValue = value.trim()
 
     const handleChange: React.ChangeEventHandler<HTMLInputElement> = (
       event
     ) => {
-      if (event.target.value.trim() === '') {
-        setIsPopupOpen(false)
-      } else {
-        if (hasComboOptions()) {
-          setIsPopupOpen(true)
-        }
-      }
+      handleChangeValue(event.target.value.trim())
     }
 
     const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
@@ -188,36 +163,11 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
           if (event.altKey) {
             break
           }
-          if (isPopupOpen) {
-            // Places focus on the first focusable element in the popup.
-            if (!selectedOption) {
-              const head = getHead()
-              // Init the selected option to the head option.
-              if (head) makeOptionSelected(head.others.id)
-            } else {
-              const nextOption = getNextOption(selectedOption)
-              if (nextOption) makeOptionSelected(nextOption.others.id)
-            }
-          }
-          break
-        }
-        case KEYBOARD_KEYS.ARROW_UP: {
-          /**
-           * If the popup is displayed:
-           *   - If the popup contains focus, returns focus to the textbox.
-           *   - Closes the popup.
-           * */
-          if (event.altKey && isPopupOpen) {
-            setIsPopupOpen(false)
-            resetOptions()
-          } else if (hasComboOptions()) {
-            /**
-             * If the popup is available, places focus on the last focusable element in the popup
-             * */
-            const tail = getTail()
-            if (tail) {
-              makeOptionSelected(tail.others.id)
-              setIsPopupOpen(true)
+          // If there is selected option.
+          if (selectedOption) {
+            const nextOption = getNextOption(selectedOption)
+            if (nextOption) {
+              makeOptionSelected(nextOption.others.id)
             }
           }
           break
@@ -226,21 +176,18 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
           setIsPopupOpen(false)
           break
         }
-        //  If an autocomplete suggestion is automatically selected, accepts the suggestion either by placing the
-        //  input cursor at the end of the accepted value in the textbox
-        case KEYBOARD_KEYS.ENTER: {
-          if (isPopupOpen && selectedOption) {
-            setIsPopupOpen(false)
-            onSelect?.(selectedOption.others.label)
-            resetOptions()
-          }
-        }
       }
     }
 
-    const handleBlur = useHandleBlur()
+    function handleFocus() {
+      if (Boolean(trimmedValue)) {
+        handleChangeValue(trimmedValue)
+      }
+    }
 
-    function handleFocus() {}
+    function handleBlur() {
+      /* setIsPopupOpen(false) */
+    }
 
     const ref = useForkedRef(comboboxInputRef, forwardRef)
 
@@ -294,41 +241,28 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
 const ComboboxList = forwardRefWithAs<HTMLUListElement, {}, 'ul'>(
   function ComboboxList({ as: Comp = 'ul', ...otherProps }, forwardRef) {
     const {
-      comboboxListRef,
-      comboboxInputRef,
       isPopupOpenState: [isPopupOpen],
+      comboboxInputRef,
     } = useContext(ComboboxContext)
-
-    const ref = useForkedRef(forwardRef, comboboxListRef)
-
     return (
       <Popover targetRef={comboboxInputRef}>
-        <Comp
-          ref={ref}
-          hidden={!isPopupOpen}
-          id="combobox-list"
-          /**
-       * Based on the Combobox specs, the descendants of the Combobox, excluding the combobox textbox, must not be focusable nor tabbable.
-       * But here we make the element as focusable to be able we can
-       * bypass the closing of popup whenever the combobox input lost its focus.
-       * We don't want to close the popup if the combobox input lost its focus tobe
-       * able we can run a logic before closing the popup.
-       *
-       * The cons of this hack is that it shows the default focus css state style 
-       * on the element, we need to make sure to remove the focus on this element.
-          /**
-           * An element that contains or owns all the listbox options has role listbox.
-           * */
-          tabIndex={-1}
-          role="listbox"
-          /**
-           * Each option in the listbox has role option and is a DOM descendant of the element with role listbox
-           * or is referenced by an aria-owns property on the listbox element.
-           * */
-          aria-owns=""
-          aria-hidden={true}
-          {...otherProps}
-        ></Comp>
+        {isPopupOpen && (
+          <Comp
+            ref={forwardRef}
+            id="combobox-list"
+            /**
+             * An element that contains or owns all the listbox options has role listbox.
+             * */
+            role="listbox"
+            /**
+             * Each option in the listbox has role option and is a DOM descendant of the element with role listbox
+             * or is referenced by an aria-owns property on the listbox element.
+             * */
+            aria-owns=""
+            aria-hidden={true}
+            {...otherProps}
+          ></Comp>
+        )}
       </Popover>
     )
   }
@@ -344,11 +278,8 @@ const ComboboxOption = forwardRefWithAs<
   forwardRef
 ) {
   const ownRef = useRef<HTMLLIElement | null>(null)
-  const {
-    id,
-    onSelect,
-    isPopupOpenState: [, setIsPopupOpen],
-  } = useContext(ComboboxContext)
+  const { id } = useContext(ComboboxContext)
+  const { makeOptionSelected } = useComboOptionDescendants()
   const ownDescendantWithIndex = useRegisterDescendant({
     element: ownRef.current,
     // The initial combo option type is `notSelected`.
@@ -362,30 +293,25 @@ const ComboboxOption = forwardRefWithAs<
   const isSelected =
     ownDescendantWithIndex &&
     ownDescendantWithIndex.descendant.others.type === ComboOptionTypes.selected
+  const isHidden =
+    ownDescendantWithIndex &&
+    ownDescendantWithIndex.descendant.others.type === ComboOptionTypes.hidden
   const ref = useForkedRef(ownRef, forwardRef)
+  const optionId = ownDescendantWithIndex?.descendant.others.id ?? 0
   const optionElId = makeId(id, ownDescendantWithIndex?.index ?? -1)
 
   function handleClick() {
-    onSelect?.(label)
-    setIsPopupOpen(false)
+    if (ownDescendantWithIndex && !isSelected) {
+      makeOptionSelected(optionId)
+    }
   }
 
   return (
     <Comp
+      hidden={isHidden}
       id={optionElId}
       ref={ref}
       onClick={handleClick}
-      /**
-       * Based on the Combobox specs, the descendants of the Combobox, excluding the combobox textbox, must not be focusable nor tabbable.
-       * But here we make the element as focusable to be able we can
-       * bypass the closing of popup whenever the combobox input lost its focus.
-       * We don't want to close the popup if the combobox input lost its focus tobe
-       * able we can run a logic before closing the popup.
-       *
-       * The cons of this hack is that it shows the default focus css state style
-       * on the element, we need to make sure to remove the focus on this element.
-       * */
-      tabIndex={-1}
       /**
        * Each option in the listbox has role option and is a DOM descendant of the element with role listbox
        * */
@@ -400,33 +326,6 @@ const ComboboxOption = forwardRefWithAs<
     </Comp>
   )
 })
-
-function useHandleBlur() {
-  const {
-    isPopupOpenState: [, setIsPopupOpen],
-    comboboxInputRef,
-    comboboxListRef,
-  } = useContext(ComboboxContext)
-  const handleBlur: React.FocusEventHandler<HTMLInputElement> = () => {
-    // We wrap the codes for closing the popup inside the `requestAnimationFrame` to be able we can capture the
-    // element inside the Combobox which is active element before it close.
-    // Without wrapping, `ownerDocument.document.activeElement` will point to outside element.
-    requestAnimationFrame(function closePopup() {
-      const ownerDocument = comboboxInputRef.current?.ownerDocument ?? document
-      // We only want to close the popup if the blur event was dispatched on an element which is not part of the combobox.
-      if (
-        ownerDocument.activeElement !== comboboxInputRef.current &&
-        comboboxListRef.current &&
-        ownerDocument.activeElement !== comboboxListRef.current
-      ) {
-        if (!comboboxListRef.current.contains(ownerDocument.activeElement)) {
-          setIsPopupOpen(false)
-        }
-      }
-    })
-  }
-  return handleBlur
-}
 
 function useComboOptionDescendants() {
   const [comboOptions, setComboOptions] = useDescendantsState<
@@ -499,20 +398,40 @@ function useComboOptionDescendants() {
       return nullableData(tail)
     }
 
-    function resetOptions() {
-      setComboOptions((prevOptions) => {
-        return prevOptions.map((prevOption) => ({
-          ...prevOption,
-          others: {
-            ...prevOption.others,
-            type: ComboOptionTypes.notSelected,
-          },
-        }))
-      })
-    }
-
-    function hasComboOptions() {
-      return comboOptions.length > 0
+    function handleChangeValue(value: string) {
+      const newComboOptions = []
+      let firstSelectedOption = null
+      for (const option of comboOptions) {
+        if (!option.others.label.includes(value)) {
+          newComboOptions.push({
+            ...option,
+            others: {
+              ...option.others,
+              type: ComboOptionTypes.hidden,
+            },
+          })
+        } else {
+          let newOption = {
+            ...option,
+            others: {
+              ...option.others,
+              type: ComboOptionTypes.notSelected,
+            },
+          }
+          if (!firstSelectedOption && value !== '') {
+            newOption = {
+              ...option,
+              others: {
+                ...option.others,
+                type: ComboOptionTypes.selected,
+              },
+            }
+            firstSelectedOption = newOption
+          }
+          newComboOptions.push(newOption)
+        }
+      }
+      setComboOptions(newComboOptions)
     }
 
     return {
@@ -522,8 +441,7 @@ function useComboOptionDescendants() {
       makeOptionSelected,
       getHead,
       getTail,
-      hasComboOptions,
-      resetOptions,
+      handleChangeValue,
     }
   }, [setComboOptions, comboOptions])
 }
@@ -557,7 +475,6 @@ const Popover = forwardRefWithAs<
           position: 'absolute',
           left: ownPosition.left,
           top: ownPosition.bottom,
-          zIndex: 1,
         }}
         {...otherProps}
       />
