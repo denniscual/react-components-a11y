@@ -16,8 +16,8 @@ export default function Sample() {
       setLibraries(initLibs)
     } else {
       // do a filter in here
-      setLibraries((prevLibs) => {
-        return prevLibs.filter((lib) => lib.includes(value))
+      setLibraries(() => {
+        return initLibs.filter((lib) => lib.includes(value))
       })
     }
   }

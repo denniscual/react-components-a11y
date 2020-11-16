@@ -23,8 +23,7 @@ import createDescendantsManager, {
 } from '../CustomDescendantsManager'
 import Portal from '../portal'
 
-// TODO: Review the specs
-// TODO: Add the missing states, roles, keyboard support.
+// THIS COMPONENT IS VOID!!!!!!!!!!!!!
 
 const {
   useDescendantsState,
@@ -46,8 +45,6 @@ interface ComboOptionOtherType {
 }
 
 type ComboOptionType = DescendantType<ComboOptionOtherType>
-
-// TODO: Dynamically handle the element's id.
 
 /**
  *  A combobox is a widget made up of the combination of two distinct elements: 1) a single-line textbox, and 2) an
@@ -157,7 +154,6 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
     const {
       getSelectedOption,
       makeOptionSelected,
-      getPrevOption,
       getNextOption,
       getHead,
       getTail,
@@ -171,6 +167,7 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
     ) => {
       if (event.target.value.trim() === '') {
         setIsPopupOpen(false)
+        resetOptions()
       } else {
         if (hasComboOptions()) {
           setIsPopupOpen(true)
@@ -188,7 +185,7 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
           if (event.altKey) {
             break
           }
-          if (isPopupOpen) {
+          if (isPopupOpen || Boolean(value.trim())) {
             // Places focus on the first focusable element in the popup.
             if (!selectedOption) {
               const head = getHead()
@@ -260,7 +257,6 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
         onFocus={wrapEventHandler(onFocus, handleFocus)}
         onBlur={wrapEventHandler(onBlur, handleBlur)}
         /**
-         *  TODO: This aria-controls must be included on the textbox if the listbox is displayed.
          *
          * When the combobox popup is visible, the textbox element has aria-controls set to a value
          * that refers to the combobox popup element.
@@ -274,6 +270,8 @@ const ComboboxInput = forwardRefWithAs<HTMLInputElement, {}, 'input'>(
         type="text"
         /**
          * Specify what kind of autocomplete does the combobox do.
+         * Here we chooses the automcomplete behaviour "list"
+         * with the implementation of "List autocomplete with manual selection".
          * */
         aria-autocomplete="list"
         {...otherProps}
@@ -406,7 +404,10 @@ function useHandleBlur() {
     isPopupOpenState: [, setIsPopupOpen],
     comboboxInputRef,
     comboboxListRef,
+    onSelect,
   } = useContext(ComboboxContext)
+  const { getSelectedOption, resetOptions } = useComboOptionDescendants()
+  const selectedOption = getSelectedOption()
   const handleBlur: React.FocusEventHandler<HTMLInputElement> = () => {
     // We wrap the codes for closing the popup inside the `requestAnimationFrame` to be able we can capture the
     // element inside the Combobox which is active element before it close.
@@ -421,6 +422,10 @@ function useHandleBlur() {
       ) {
         if (!comboboxListRef.current.contains(ownerDocument.activeElement)) {
           setIsPopupOpen(false)
+          if (selectedOption) {
+            onSelect(selectedOption.others.label)
+            resetOptions()
+          }
         }
       }
     })
