@@ -23,7 +23,7 @@ import createDescendantsManager, {
 } from '../CustomDescendantsManager'
 import Portal from '../portal'
 
-// THIS COMPONENT IS VOID!!!!!!!!!!!!!
+// NOTE: Not yet finishied.
 
 const {
   useDescendantsState,
